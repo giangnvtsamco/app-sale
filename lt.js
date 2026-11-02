@@ -109,24 +109,43 @@
   /* ---------- Xe: thông tin + nhật trình ---------- */
   async function openCar(bien) {
     const c = D.cars.find(x => x.bien === bien); if (!c) return;
-    if (c.mine && c.phieu) return openUse(c.phieu);
     $('#ltCarTitle').textContent = c.loai + ' · ' + c.bien;
     $('#ltCarInfo').innerHTML = `<span class="chip ${({ san: 'ok', sac: 'warn', di: 'acc', dat: 'acc' })[c.st] || 'mute'}">${esc(c.label)}</span>
       <span class="small muted">ODO ${c.odo === '' ? '—' : num(c.odo)} · pin ${c.pin == null ? '—' : c.pin + '%'}</span>`;
     const free = c.st === 'san' || c.st === 'sac';
-    $('#ltCarNew').hidden = !free;
-    $('#ltCarNew').onclick = () => { closeS('ltCarDlg'); openForm(c, null); };
+    const mine = c.mine && c.phieu;
+    $('#ltCarNew').hidden = !free && !mine;
+    $('#ltCarNew').textContent = mine ? 'Phiếu của bạn · ODO · Trả xe' : 'Lập phiếu lái thử';
+    $('#ltCarNew').onclick = () => { closeS('ltCarDlg'); if (mine) openUse(c.phieu); else openForm(c, null); };
     $('#ltLogList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải nhật trình…</div>';
     openS('ltCarDlg');
     try {
       const L = await api('ltLog', bien);
       $('#ltLogHead').textContent = 'Nhật trình · ' + L.soChuyen + ' chuyến' + (L.soLech ? ' · ' + L.soLech + ' lần ODO lệch' : '');
-      $('#ltLogList').innerHTML = L.rows.length ? L.rows.map(r => `<div class="lt-log">
-        <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(r.nguoi)}</b><span class="mono small">${esc(r.ngay)}</span></div>
-        <div class="small muted">${esc(r.muc)}${r.gioDi ? ' · ' + esc(r.gioDi) + (r.gioVe ? '–' + esc(r.gioVe) : '') : ''}${r.kh ? ' · ' + esc(r.kh) : ''}</div>
-        <div class="small mono">${esc(r.odoDi || '—')} → ${esc(r.odoVe || (r.trangThai === 'Đang dùng' ? 'đang dùng' : '—'))}${r.km !== '' ? ' · ' + esc(r.km) + ' km' : ''}${r.pin !== '' && r.pin != null ? ' · pin ' + esc(r.pin) + '%' : ''}</div>
-        ${r.lech ? `<div class="lech">${esc(r.lech)}</div>` : ''}</div>`).join('') : '<div class="empty">Chưa có chuyến nào.</div>';
+      LOG = L.rows; logShown = 0;
+      $('#ltLogList').innerHTML = L.rows.length ? '' : '<div class="empty">Chưa có chuyến nào.</div>';
+      moreLog();
     } catch (e) { $('#ltLogList').innerHTML = `<div class="empty">${esc(e)}</div>`; }
+  }
+
+  /* Nhật trình: hiện 30 lượt, bấm "Xem thêm" để xem tiếp toàn bộ hành trình */
+  let LOG = [], logShown = 0;
+  function logRow(r) {
+    return `<div class="lt-log">
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(r.nguoi)}</b><span class="mono small">${esc(r.ngayFull || r.ngay)}</span></div>
+      <div class="small muted">${esc(r.muc)}${r.gioDi ? ' · ' + esc(r.gioDi) + (r.gioVe ? '–' + esc(r.gioVe) : '') : ''}${r.kh ? ' · ' + esc(r.kh) : ''}</div>
+      ${r.loTrinh ? `<div class="small">${esc(r.loTrinh)}</div>` : ''}
+      <div class="small mono">${esc(r.odoDi || '—')} → ${esc(r.odoVe || (r.trangThai === 'Đang dùng' ? 'đang dùng' : '—'))}${r.km !== '' ? ' · ' + esc(r.km) + ' km' : ''}${r.pin !== '' && r.pin != null ? ' · pin ' + esc(r.pin) + '%' : ''}</div>
+      ${r.lech ? `<div class="lech">${esc(r.lech)}</div>` : ''}</div>`;
+  }
+  function moreLog() {
+    const old = document.getElementById('ltLogMore'); if (old) old.remove();
+    const next = LOG.slice(logShown, logShown + 30); logShown += next.length;
+    $('#ltLogList').insertAdjacentHTML('beforeend', next.map(logRow).join(''));
+    if (logShown < LOG.length) {
+      $('#ltLogList').insertAdjacentHTML('beforeend', `<button class="btn block" id="ltLogMore" style="margin-top:8px">Xem thêm · còn ${LOG.length - logShown} lượt</button>`);
+      $('#ltLogMore').onclick = moreLog;
+    }
   }
 
   /* ---------- Bước 1: phiếu ---------- */
@@ -315,6 +334,7 @@
       });
     };
     $('#ltReprint').onclick = () => doPrint(U);
+    $('#ltLogBtn').onclick = () => { closeS('ltUseDlg'); openCar(U.bien); };
     $('#ltEditBtn').onclick = () => { closeS('ltUseDlg'); openForm(D.cars.find(c => c.bien === U.bien) || { loai: '', bien: U.bien }, U); };
     $('#ltCancelBtn').onclick = () => {
       if (!confirm('Hủy phiếu ' + U.id + '?')) return;
@@ -384,7 +404,7 @@
     <button class="btn out" id="ltStartBtn" style="min-height:50px;font-weight:800;letter-spacing:.1em">LƯU ODO ĐI</button>
     <button class="btn pri" id="ltReturnBtn" style="min-height:50px;font-weight:800;letter-spacing:.2em;grid-column:2">TRẢ XE</button></div>
   <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
-    <button class="btn sm" id="ltReprint">In lại hồ sơ</button><button class="btn sm" id="ltEditBtn">Sửa phiếu</button><button class="btn sm bad" id="ltCancelBtn">Hủy phiếu</button><button class="btn sm" data-close="ltUseDlg">Đóng</button></div>
+    <button class="btn sm" id="ltLogBtn">Nhật trình xe</button><button class="btn sm" id="ltReprint">In lại hồ sơ</button><button class="btn sm" id="ltEditBtn">Sửa phiếu</button><button class="btn sm bad" id="ltCancelBtn">Hủy phiếu</button><button class="btn sm" data-close="ltUseDlg">Đóng</button></div>
 </div></div>`;
 
   window.LT = { mount: mount, load: load };
