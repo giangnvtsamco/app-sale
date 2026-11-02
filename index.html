@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e8c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="App Sale">
+<title>App Sale · SAMCO</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/style.css">
+<style>
+  .login{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:420px;margin:0 auto;
+    padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom))}
+  .login .title{font-size:46px}
+  .who{display:flex;justify-content:space-between;align-items:center}
+  .who button{border:0;background:none;color:var(--muted);font-size:12px;font-weight:600;padding:6px 0;cursor:pointer}
+  .warn-line{font-size:12px;color:var(--bad);font-weight:600}
+  .soon-box{text-align:center;padding:40px 16px;color:var(--muted)}
+  .soon-box .title{font-size:28px;color:var(--ink)}
+  .toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .toggle input{width:24px;height:24px;accent-color:var(--accent);flex-shrink:0;margin:0}
+  .thumb{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line);display:block}
+</style>
+</head>
+<body>
+
+<!-- ĐĂNG NHẬP -->
+<section id="vLogin" class="login" hidden>
+  <div class="hd-l">
+    <div class="brand">SAMCO</div>
+    <div class="title">App Sale</div>
+    <div class="sub">VinFast SAMCO Bình Tân</div>
+    <div class="chrome"></div>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:14px">
+    <label class="field"><span class="lbl">Nhân viên <span class="req">*</span></span>
+      <select id="lgTen" class="inp"><option value="">Đang tải…</option></select></label>
+    <label class="field"><span class="lbl">Mã PIN <span class="req">*</span></span>
+      <input id="lgPin" class="inp mono" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8"></label>
+    <button id="lgBtn" class="btn cta pri">Đăng nhập</button>
+    <div class="hint" style="text-align:center">Quên mã PIN? Vui lòng liên hệ Giang.</div>
+  </div>
+  <a href="quanly.html" class="small" style="text-align:center;color:var(--muted)">Dành cho quản lý</a>
+</section>
+
+<!-- APP -->
+<main id="vApp" class="wrap" hidden>
+  <div class="hd">
+    <div class="hd-l" style="flex:1">
+      <div class="who"><span class="brand">SAMCO</span><button id="btnOut" title="Đăng xuất"></button></div>
+      <div class="title" id="pgTitle">Cavet</div>
+      <div class="sub" id="pgSub">Hạn 20 ngày từ ngày hóa đơn</div>
+      <div class="chrome"></div>
+    </div>
+  </div>
+
+  <section id="tabCavet">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="kpi">
+        <div><span class="k">Xe của tôi</span><span class="v" id="kTong">–</span></div>
+        <div><span class="k">Xong</span><span class="v ok" id="kXong">–</span></div>
+        <div><span class="k">Cần làm</span><span class="v warn" id="kCan">–</span></div>
+        <div><span class="k">Quá hạn</span><span class="v bad" id="kQh">–</span></div>
+      </div>
+      <div class="pills" id="cvFilter">
+        <button class="pill on" data-f="can">Cần làm</button>
+        <button class="pill" data-f="all">Tất cả</button>
+      </div>
+      <div class="list" id="cvList"><div class="loading"><span class="spin"></span>Đang tải…</div></div>
+    </div>
+  </section>
+
+  <section id="tabBaoHiem" hidden><div class="soon-box"><div class="title">Bảo hiểm</div><p>Tab đang hoàn thiện, sẽ mở sau tab Cavet.</p></div></section>
+  <section id="tabLaiThu" hidden><div class="soon-box"><div class="title">Xe lái thử</div><p>Tab đang hoàn thiện, sẽ mở sau tab Bảo hiểm.</p></div></section>
+</main>
+
+<nav class="tabbar" id="tabbar" hidden>
+  <button class="on" data-tab="Cavet">Cavet</button>
+  <button data-tab="BaoHiem">Bảo hiểm<span class="soon">SẮP CÓ</span></button>
+  <button data-tab="LaiThu">Lái thử<span class="soon">SẮP CÓ</span></button>
+</nav>
+
+<!-- CHI TIẾT XE -->
+<div class="sheet-bg" id="dlg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dTen">
+    <div class="grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+        <div id="dTen" style="font-family:var(--display);font-size:24px;line-height:1.1;text-transform:uppercase"></div>
+        <div id="dVin" class="mono small"></div>
+      </div>
+      <span id="dChip" class="chip"></span>
+    </div>
+    <div id="dWarn" class="warn-line" hidden>Admin báo chưa nhận cavet. Vui lòng kiểm tra và gửi lại.</div>
+    <div class="card flat" id="dInfo" style="padding:4px 14px"></div>
+    <div id="dForm" style="display:flex;flex-direction:column;gap:12px">
+      <label class="field"><span class="lbl">Số cavet · không bắt buộc</span>
+        <input id="fSo" class="inp mono" placeholder="VD: 50 00349452" autocomplete="off"></label>
+      <div class="field"><span class="lbl">Ảnh cavet</span>
+        <div class="pills"><button class="pill" id="fChup" type="button">Chụp ảnh</button><button class="pill on" id="fKhong" type="button">Không chụp</button></div>
+        <input id="fFile" type="file" accept="image/*" hidden>
+        <img id="fThumb" class="thumb" alt="Ảnh cavet vừa chụp" hidden>
+        <span class="hint" id="fAnhCo" hidden>Đã có ảnh cavet. Chụp lại nếu cần thay.</span>
+        <span class="hint">Chụp mới hoặc chọn ảnh có sẵn trong máy.</span>
+      </div>
+      <label class="toggle"><span style="display:flex;flex-direction:column;gap:2px"><span class="b">Đã gửi Admin</span><span class="hint">Hoàn thành khi Admin xác nhận đã nhận</span></span>
+        <input id="fGui" type="checkbox"></label>
+      <label class="field"><span class="lbl">Ghi chú</span>
+        <input id="fGhi" class="inp" placeholder="VD: Chờ ngân hàng gửi cavet" maxlength="300"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+      <button class="btn block" id="dClose" type="button">Đóng</button>
+      <button class="btn cta pri" id="dSave" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
+<script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
+<script>
+const KEY = 'appsale_auth';
+let auth = store.get(KEY);
+let cars = [], filter = 'can', cur = null, anhB64 = '';
+
+/* ---------- Đăng nhập ---------- */
+async function showLogin() {
+  $('#vLogin').hidden = false; $('#vApp').hidden = true; $('#tabbar').hidden = true;
+  try {
+    const c = await call('getConfig');
+    const last = store.get('appsale_last') || '';
+    $('#lgTen').innerHTML = '<option value="">— Chọn tên —</option>' +
+      c.staff.map(s => `<option${s.ten === last ? ' selected' : ''}>${esc(s.ten)}</option>`).join('');
+  } catch (e) { $('#lgTen').innerHTML = '<option value="">Không tải được</option>'; toast(e, 1); }
+}
+
+$('#lgBtn').onclick = () => {
+  const ten = $('#lgTen').value, pin = $('#lgPin').value.trim();
+  if (!ten) return toast('Vui lòng chọn tên.', 1);
+  if (!pin) return toast('Vui lòng nhập mã PIN.', 1);
+  busy($('#lgBtn'), 'Đang kiểm tra', async () => {
+    try {
+      await call('login', { ten, pin });
+      auth = { ten, pin }; store.set(KEY, auth); store.set('appsale_last', ten);
+      $('#lgPin').value = ''; startApp();
+    } catch (e) { toast(e, 1); }
+  });
+};
+$('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
+
+$('#btnOut').onclick = () => {
+  if (!confirm('Đăng xuất khỏi máy này?')) return;
+  store.del(KEY); auth = null; showLogin();
+};
+
+/* ---------- App ---------- */
+function startApp() {
+  $('#vLogin').hidden = true; $('#vApp').hidden = false; $('#tabbar').hidden = false;
+  $('#btnOut').textContent = auth.ten + ' · Đăng xuất';
+  loadCavet();
+}
+
+$$('#tabbar button').forEach(b => b.onclick = () => {
+  const t = b.dataset.tab;
+  $$('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
+  ['Cavet', 'BaoHiem', 'LaiThu'].forEach(k => $('#tab' + k).hidden = k !== t);
+  $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm', LaiThu: 'Xe lái thử' }[t];
+  $('#pgSub').textContent = t === 'Cavet' ? 'Hạn 20 ngày từ ngày hóa đơn' : 'Sắp có';
+});
+
+async function loadCavet() {
+  $('#cvList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
+  try {
+    const d = await call('myCavet', auth);
+    lastLoad = Date.now();
+    cars = d.cars;
+    $('#kTong').textContent = d.kpi.tong; $('#kXong').textContent = d.kpi.xong;
+    $('#kCan').textContent = d.kpi.can; $('#kQh').textContent = d.kpi.quahan;
+    renderCavet();
+  } catch (e) {
+    if (/PIN/.test(String(e))) { store.del(KEY); auth = null; toast(e, 1); return showLogin(); }
+    $('#cvList').innerHTML = `<div class="empty">${esc(e)}<br><button class="btn sm out" style="margin-top:10px" onclick="loadCavet()">Thử lại</button></div>`;
+  }
+}
+
+function renderCavet() {
+  const can = cars.filter(x => x.st.nhom === 'can' || x.st.nhom === 'quahan');
+  const pills = $$('#cvFilter .pill');
+  pills[0].textContent = 'Cần làm · ' + can.length; pills[1].textContent = 'Tất cả · ' + cars.length;
+  pills.forEach(p => p.classList.toggle('on', p.dataset.f === filter));
+  const list = filter === 'can' ? can : cars;
+  if (!list.length) {
+    $('#cvList').innerHTML = `<div class="empty">${filter === 'can' ? 'Không có xe cần làm. Cảm ơn anh/chị.' : 'Chưa có xe nào.'}</div>`;
+    return;
+  }
+  $('#cvList').innerHTML = list.map(x => `
+    <button class="row" data-id="${esc(x.id)}">
+      <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+        <span class="t">${esc(x.kh)}</span>
+        <span class="s">${esc(x.loai || x.xe)} · HĐ <span class="mono">${esc(x.hd.slice(0, 5))}</span>${x.adminXn === 'Chưa nhận' && !x.daGui ? ' · <b style="color:var(--bad)">Admin chưa nhận</b>' : ''}</span>
+      </span>
+      <span class="chip ${esc(x.st.k)}">${esc(x.st.t)}</span>
+    </button>`).join('');
+}
+
+$('#cvFilter').onclick = e => { const b = e.target.closest('.pill'); if (b) { filter = b.dataset.f; renderCavet(); } };
+$('#cvList').onclick = e => { const b = e.target.closest('.row'); if (b) openCar(b.dataset.id); };
+
+/* ---------- Chi tiết xe ---------- */
+function openCar(id) {
+  cur = cars.find(x => x.id === id); if (!cur) return;
+  anhB64 = '';
+  const xong = cur.st.nhom === 'xong';
+  $('#dTen').textContent = cur.kh;
+  $('#dVin').textContent = cur.vin;
+  $('#dChip').className = 'chip ' + cur.st.k; $('#dChip').textContent = cur.st.t;
+  $('#dWarn').hidden = !(cur.adminXn === 'Chưa nhận' && !cur.daGui);
+  const kv = [['Xe', [cur.xe, cur.mau].filter(Boolean).join(' · ')], ['Ngày hóa đơn', cur.hd], ['Hạn cavet', cur.han]];
+  if (cur.hopDong) kv.push(['Số hợp đồng', cur.hopDong]);
+  if (cur.daGui && cur.guiLuc) kv.push(['Báo đã gửi', cur.guiLuc]);
+  if (xong) kv.push(['Admin xác nhận', cur.xnLuc]);
+  $('#dInfo').innerHTML = kv.map(r => `<div class="kv"><span>${esc(r[0])}</span><span class="mono">${esc(r[1] || '—')}</span></div>`).join('');
+  $('#fSo').value = cur.soCavet; $('#fGhi').value = cur.ghiChu; $('#fGui').checked = cur.daGui;
+  $('#fThumb').hidden = true; $('#fAnhCo').hidden = !cur.coAnh;
+  $('#fChup').classList.remove('on'); $('#fKhong').classList.add('on');
+  $$('#dForm input, #dForm button').forEach(el => el.disabled = xong);
+  $('#dSave').hidden = xong;
+  $('#dlg').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeCar() { $('#dlg').hidden = true; document.body.style.overflow = ''; cur = null; }
+$('#dClose').onclick = closeCar;
+$('#dlg').onclick = e => { if (e.target.id === 'dlg') closeCar(); };
+
+$('#fChup').onclick = () => $('#fFile').click();
+$('#fKhong').onclick = () => { anhB64 = ''; $('#fThumb').hidden = true; $('#fChup').classList.remove('on'); $('#fKhong').classList.add('on'); };
+$('#fFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    anhB64 = await shrinkImage(f);
+    $('#fThumb').src = 'data:image/jpeg;base64,' + anhB64; $('#fThumb').hidden = false;
+    $('#fChup').classList.add('on'); $('#fKhong').classList.remove('on');
+  } catch (err) { toast(err, 1); }
+};
+
+$('#dSave').onclick = () => busy($('#dSave'), 'Đang lưu', async () => {
+  try {
+    const x = await call('saveCavet', auth, cur.id, { soCavet: $('#fSo').value, ghiChu: $('#fGhi').value, daGui: $('#fGui').checked, anh: anhB64 });
+    const i = cars.findIndex(c => c.id === x.id); if (i >= 0) cars[i] = x;
+    closeCar(); toast('Đã lưu'); loadCavet();
+  } catch (e) { toast(e, 1); }
+});
+
+/* Mở lại app sau hơn 1 phút → tự tải danh sách mới */
+let lastLoad = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && auth && !$('#vApp').hidden && $('#dlg').hidden && Date.now() - lastLoad > 60000) loadCavet();
+});
+
+/* ---------- Khởi động ---------- */
+if (auth && auth.ten) startApp(); else showLogin();
+</script>
+</body>
+</html>

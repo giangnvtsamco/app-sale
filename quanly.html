@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Quản lý · App Sale SAMCO</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/style.css">
+<style>
+  .grid2{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+  @media (max-width:980px){.grid2{grid-template-columns:1fr}}
+  .side{display:flex;flex-direction:column;gap:14px}
+  .msg{font-size:13px;line-height:1.55;white-space:pre-line;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:340px;overflow:auto}
+  .act{display:flex;gap:6px;justify-content:flex-end}
+  .tbl td .sub2{display:block;font-size:11px;color:var(--muted)}
+  .step{display:flex;flex-direction:column;gap:8px}
+  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:110px;border:1.5px dashed var(--line);border-radius:12px;background:var(--paper-2);cursor:pointer;text-align:center;padding:12px}
+  .drop:hover{border-color:var(--accent)}
+  .rv td{padding:6px 6px}
+  .rv input.inp,.rv select.inp{min-height:34px;font-size:12px;padding:0 6px;border-radius:8px}
+  .rv select.inp{padding-right:2px}
+  .bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+  .loginbox{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:18px;padding:0 16px}
+</style>
+</head>
+<body>
+
+<section id="vLogin" class="loginbox" hidden>
+  <div class="hd-l">
+    <div class="brand">SAMCO</div>
+    <div class="title">Quản lý</div>
+    <div class="sub">App Sale · chỉ Giang</div>
+    <div class="chrome"></div>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px">
+    <label class="field"><span class="lbl">Mã PIN quản lý <span class="req">*</span></span>
+      <input id="lgPin" class="inp mono" type="password" inputmode="numeric" autocomplete="current-password"></label>
+    <button id="lgBtn" class="btn cta pri">Vào trang quản lý</button>
+  </div>
+  <a href="./" class="small" style="text-align:center;color:var(--muted)">Về App Sale</a>
+</section>
+
+<main id="vApp" class="wrap wide" hidden>
+  <div class="hd" style="flex-wrap:wrap">
+    <div class="hd-l">
+      <div class="brand">SAMCO</div>
+      <div class="title" id="pgTitle">Đối chiếu cavet</div>
+      <div class="sub" id="pgSub">Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành</div>
+      <div class="chrome"></div>
+    </div>
+    <div class="tabs-top" id="tabs">
+      <button class="on" data-v="Cavet">Cavet</button>
+      <button data-v="NhapXe">Nhập xe</button>
+      <button id="btnOut">Thoát</button>
+    </div>
+  </div>
+
+  <!-- ===== CAVET ===== -->
+  <section id="vCavet" style="display:flex;flex-direction:column;gap:14px">
+    <div class="kpi">
+      <div><span class="k">Chờ đối chiếu</span><span class="v acc" id="kCho">–</span></div>
+      <div><span class="k">Admin đã nhận · tháng</span><span class="v ok" id="kXong">–</span></div>
+      <div><span class="k">Tick sai · 90 ngày</span><span class="v bad" id="kSai">–</span></div>
+      <div><span class="k">Chưa gửi · còn hạn</span><span class="v warn" id="kCan">–</span></div>
+      <div><span class="k">Quá hạn</span><span class="v bad" id="kQh">–</span></div>
+    </div>
+    <div class="grid2">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="pills" id="cvFilter">
+            <button class="pill on" data-f="cho">Chờ đối chiếu</button>
+            <button class="pill" data-f="can">Chưa gửi</button>
+            <button class="pill" data-f="quahan">Quá hạn</button>
+            <button class="pill" data-f="all">Tất cả</button>
+          </div>
+          <input id="cvFind" class="inp" style="max-width:240px;min-height:38px;margin-left:auto" placeholder="Tìm khách, sale, số khung">
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Khách hàng</th><th>Sale</th><th>Ngày HĐ</th><th>Trạng thái</th><th>Số cavet</th><th>Ảnh</th><th style="text-align:right">Admin xác nhận</th></tr></thead>
+            <tbody id="cvBody"><tr><td colspan="7"><div class="loading"><span class="spin"></span>Đang tải…</div></td></tr></tbody>
+          </table>
+        </div>
+        <div class="hint">“Chưa nhận”: bỏ tick của sale, xe quay lại danh sách cần làm và ghi 1 lần tick sai cho sale.</div>
+      </div>
+      <div class="side">
+        <div class="card" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="sect">Báo cáo sáng</span><button class="btn sm out" id="btnCopy">Sao chép</button></div>
+          <div class="msg" id="baoCao">…</div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:6px">
+          <span class="sect">Tick sai theo sale · 90 ngày</span>
+          <div id="saiList" class="small"></div>
+          <span class="hint">Chỉ Giang xem được.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NHẬP XE ===== -->
+  <section id="vNhapXe" style="display:flex;flex-direction:column;gap:14px" hidden>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+      <div class="card step">
+        <span class="sect">1 · File PDF hóa đơn</span>
+        <label class="drop" for="pdfIn"><b id="pdfLbl">Chọn file PDF</b><span class="hint">Chọn nhiều file cùng lúc. App đọc: khách, số khung, loại xe, màu, ngày và số HĐ, giá.</span></label>
+        <input id="pdfIn" type="file" accept="application/pdf" multiple hidden>
+        <div class="bar" id="ocrBar" hidden><i></i></div>
+        <span class="hint" id="ocrMsg"></span>
+      </div>
+      <div class="card step">
+        <span class="sect">2 · Tin Zalo kế toán (khách – sale)</span>
+        <textarea id="zalo" class="inp" placeholder="VD: TRUNG- HOÀNG, VÂN- NGUYÊN, HẰNG- ĐIỀN, LINH, TRÍ, THỊNH- ĐẠT"></textarea>
+        <span class="hint">Các khách đứng trước thuộc sale ghi sau dấu “-”. Gõ thiếu dấu vẫn nhận.</span>
+        <button class="btn sm out" id="btnZalo" style="align-self:flex-start">Ghép sale</button>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="display:flex;flex-direction:column;gap:2px"><span class="sect">Hằng tháng · file Excel chị Trâm gửi</span>
+        <span class="hint">Khớp theo số khung → bổ sung SĐT khách (dùng gọi tái tục). Không ghi đè số đã có.</span></span>
+      <label class="btn out" for="xlsIn">Tải file Excel</label>
+      <input id="xlsIn" type="file" accept=".xlsx,.xls,.csv" hidden>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="sect" style="margin-right:6px">3 · Kiểm tra trước khi lưu</span>
+      <span class="chip ok" id="cOk">0 hợp lệ</span><span class="chip warn" id="cWarn">0 cần sửa</span><span class="chip bad" id="cBad">0 trùng</span>
+      <button class="btn sm" id="btnAdd" style="margin-left:auto">+ Thêm dòng nhập tay</button>
+    </div>
+    <div class="tbl-wrap">
+      <table class="tbl rv">
+        <thead><tr><th>File</th><th>Khách hàng</th><th>Số khung</th><th>Loại xe</th><th>Màu</th><th>Ngày HĐ</th><th>Số HĐ</th><th>Giá (VAT)</th><th>Sale</th><th>Kết quả</th><th></th></tr></thead>
+        <tbody id="rvBody"><tr><td colspan="11"><div class="empty">Chọn file PDF hóa đơn để bắt đầu.</div></td></tr></tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="hint">Ô nào app đọc sai thì sửa trực tiếp. Dòng trùng số khung sẽ bỏ qua.</span>
+      <button class="btn pri" id="btnSave" style="min-width:200px;letter-spacing:.14em;font-weight:800">LƯU 0 XE</button>
+    </div>
+  </section>
+</main>
+
+<div class="sheet-bg" id="txtDlg" hidden>
+  <div class="sheet" style="max-width:720px"><div class="grab"></div>
+    <span class="sect">Chữ app đọc được từ PDF</span>
+    <div class="msg mono" id="txtBody" style="max-height:60vh;font-size:12px"></div>
+    <button class="btn block" onclick="$('#txtDlg').hidden=true">Đóng</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
+<script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script>
+let PIN = (() => { try { return sessionStorage.getItem('appsale_admin') || ''; } catch (e) { return ''; } })();
+let D = null, cvF = 'cho', staff = [], rows = [];
+
+/* ---------- Đăng nhập ---------- */
+function showLogin() { $('#vLogin').hidden = false; $('#vApp').hidden = true; setTimeout(() => $('#lgPin').focus(), 50); }
+$('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
+  const p = $('#lgPin').value.trim(); if (!p) return toast('Vui lòng nhập mã PIN.', 1);
+  try { await call('adminLogin', p); PIN = p; try { sessionStorage.setItem('appsale_admin', p); } catch (e) {} $('#lgPin').value = ''; start(); }
+  catch (e) { toast(e, 1); }
+});
+$('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
+$('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
+
+function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); }
+
+$('#tabs').onclick = e => {
+  const b = e.target.closest('button[data-v]'); if (!b) return;
+  $$('#tabs button[data-v]').forEach(x => x.classList.toggle('on', x === b));
+  $('#vCavet').hidden = b.dataset.v !== 'Cavet'; $('#vNhapXe').hidden = b.dataset.v !== 'NhapXe';
+  $('#pgTitle').textContent = b.dataset.v === 'Cavet' ? 'Đối chiếu cavet' : 'Nhập xe';
+  $('#pgSub').textContent = b.dataset.v === 'Cavet' ? 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành' : 'Từ hóa đơn kế toán · dùng chung Cavet và Bảo hiểm';
+};
+
+/* ---------- Cavet ---------- */
+async function loadCavet() {
+  try {
+    D = await call('adminCavet', PIN);
+    staff = D.staff;
+    const k = D.kpi;
+    $('#kCho').textContent = k.cho; $('#kXong').textContent = k.xongThang; $('#kSai').textContent = k.sai; $('#kCan').textContent = k.can; $('#kQh').textContent = k.quahan;
+    $('#baoCao').textContent = D.baoCao;
+    $('#saiList').innerHTML = D.sai.length ? D.sai.map(s => `<div class="kv"><span>${esc(s.sale)}</span><span class="mono b" style="color:var(--bad)">${s.n}</span></div>`).join('') : '<div class="muted">Chưa có tick sai.</div>';
+    renderCv();
+  } catch (e) {
+    if (/PIN/.test(String(e))) { try { sessionStorage.removeItem('appsale_admin'); } catch (x) {} toast(e, 1); return showLogin(); }
+    $('#cvBody').innerHTML = `<tr><td colspan="7"><div class="empty">${esc(e)}</div></td></tr>`;
+  }
+}
+
+function renderCv() {
+  const q = norm($('#cvFind').value);
+  let list = D.cars.filter(x => cvF === 'all' || x.st.nhom === cvF);
+  if (q) list = list.filter(x => norm(x.kh + ' ' + x.sale + ' ' + x.vin).includes(q));
+  const n = f => D.cars.filter(x => x.st.nhom === f).length;
+  const lb = { cho: 'Chờ đối chiếu · ' + n('cho'), can: 'Chưa gửi · ' + n('can'), quahan: 'Quá hạn · ' + n('quahan'), all: 'Tất cả · ' + D.cars.length };
+  $$('#cvFilter .pill').forEach(p => { p.textContent = lb[p.dataset.f]; p.classList.toggle('on', p.dataset.f === cvF); });
+  if (!list.length) { $('#cvBody').innerHTML = '<tr><td colspan="7"><div class="empty">Không có xe.</div></td></tr>'; return; }
+  $('#cvBody').innerHTML = list.map(x => `<tr>
+    <td><b>${esc(x.kh)}</b><span class="sub2">${x.ghiChu ? 'Sale ghi: ' + esc(x.ghiChu) : esc(x.vin)}</span></td>
+    <td>${esc(x.sale)}</td>
+    <td class="mono">${esc(x.hd.slice(0, 5))}</td>
+    <td><span class="chip ${esc(x.st.k)}">${esc(x.st.t)}</span>${x.daGui ? `<span class="sub2">Tick ${esc(x.guiLuc)}</span>` : ''}</td>
+    <td class="mono">${esc(x.soCavet || '—')}</td>
+    <td>${x.coAnh ? 'Có' : 'Không'}</td>
+    <td>${x.st.nhom === 'cho'
+      ? `<div class="act"><button class="btn sm ok" data-ok="${esc(x.id)}">Đã nhận</button><button class="btn sm bad" data-no="${esc(x.id)}">Chưa nhận</button></div>`
+      : x.st.nhom === 'xong' ? `<div class="act"><span class="chip ok">Đã nhận ${esc(x.xnLuc.slice(0, 5))}</span></div>`
+      : x.adminXn === 'Chưa nhận' ? '<div class="act"><span class="chip bad">Đã trả về sale</span></div>' : ''}</td>
+  </tr>`).join('');
+}
+$('#cvFilter').onclick = e => { const b = e.target.closest('.pill'); if (b) { cvF = b.dataset.f; renderCv(); } };
+$('#cvFind').oninput = renderCv;
+$('#cvBody').onclick = e => {
+  const b = e.target.closest('button[data-ok],button[data-no]'); if (!b) return;
+  const nhan = !!b.dataset.ok, id = b.dataset.ok || b.dataset.no;
+  const x = D.cars.find(c => c.id === id);
+  if (!nhan && !confirm('Admin chưa nhận cavet xe ' + x.kh + '?\nXe sẽ trả về sale ' + x.sale + ' và ghi 1 lần tick sai.')) return;
+  busy(b, '', async () => {
+    try { await call('adminConfirm', PIN, id, nhan); toast(nhan ? 'Đã xác nhận' : 'Đã trả về sale'); await loadCavet(); }
+    catch (err) { toast(err, 1); }
+  });
+};
+$('#btnCopy').onclick = () => copyText($('#baoCao').textContent);
+
+/* ---------- Nhập xe: đọc PDF ---------- */
+const LOAI = ['VF2', 'VF3', 'VF5', 'VF6', 'VF7', 'VF8', 'VF9', 'VF MPV 7', 'Limo Green', 'Minio Green', 'Herio Green', 'Nerio Green', 'EC Van'];
+$('#pdfIn').onchange = async e => {
+  const files = Array.from(e.target.files); e.target.value = '';
+  if (!files.length) return;
+  if (!staff.length) await loadCavet(); // cần danh sách sale để ghép
+  $('#pdfLbl').textContent = files.length + ' file đã chọn';
+  $('#ocrBar').hidden = false;
+  let done = 0, fail = 0;
+  for (const f of files) {
+    $('#ocrMsg').textContent = 'Đang đọc ' + f.name + ' (' + (done + 1) + '/' + files.length + ')…';
+    try {
+      const r = await call('ocrInvoice', PIN, f.name, await fileToBase64(f));
+      rows.push(Object.assign({ sale: '', tenGoc: '' }, r));
+    } catch (err) { fail++; toast(err, 1); }
+    done++; $('#ocrBar i').style.width = (done / files.length * 100) + '%';
+  }
+  $('#ocrMsg').textContent = 'Đã đọc ' + (done - fail) + '/' + files.length + ' file.' + (fail ? ' ' + fail + ' file lỗi.' : '');
+  if ($('#zalo').value.trim()) applyZalo();
+  renderRv();
+};
+
+/* ---------- Nhập xe: ghép sale từ tin Zalo ---------- */
+function parseZalo(text) {
+  const out = []; let buf = [];
+  String(text).split(/[,;\n]+/).map(s => s.trim()).filter(Boolean).forEach(tok => {
+    const p = tok.split(/\s*[-–—]\s*/).filter(Boolean);
+    if (p.length >= 2) { buf.push(p[0]); const sale = p.slice(1).join(' '); buf.forEach(c => out.push({ kh: c, sale })); buf = []; }
+    else buf.push(p[0]);
+  });
+  buf.forEach(c => out.push({ kh: c, sale: '' }));
+  return out;
+}
+function findSale(key) {
+  const k = norm(key); if (!k) return [];
+  const hit = staff.filter(s => s.vietTat.some(v => norm(v) === k));
+  if (hit.length) return hit;
+  return staff.filter(s => s.vietTat.some(v => norm(v).split(' ')[0] === k) || norm(s.ten).split(' ').pop() === k);
+}
+function fileKey(f) { return norm(String(f || '').replace(/\.pdf$/i, '').replace(/^\s*\d+\s*[-–_.]*\s*/, '')); }
+function applyZalo() {
+  const z = parseZalo($('#zalo').value);
+  let matched = 0;
+  z.forEach(p => {
+    const k = norm(p.kh);
+    const r = rows.find(r => !r._z && fileKey(r.file) === k) || rows.find(r => !r._z && (norm(r.kh) === k || norm(r.kh).endsWith(' ' + k)));
+    if (!r) return;
+    r._z = 1; matched++;
+    r.tenGoc = p.sale.toUpperCase();
+    const s = findSale(p.sale);
+    r.sale = s.length === 1 ? s[0].ten : '';
+    r._amb = s.length > 1 ? s.map(x => x.ten) : null;
+  });
+  rows.forEach(r => delete r._z);
+  return { total: z.length, matched };
+}
+$('#btnZalo').onclick = () => {
+  if (!rows.length) return toast('Vui lòng chọn file PDF trước.', 1);
+  const r = applyZalo(); renderRv();
+  toast('Đã ghép ' + r.matched + '/' + r.total + ' khách trong tin Zalo');
+};
+
+/* ---------- Bảng kiểm tra ---------- */
+function vOk(v) { return /^[A-Z0-9]{17}$/.test(String(v || '').toUpperCase().replace(/\s/g, '')); }
+function dOk(v) { return /^\d{2}\/\d{2}\/\d{4}$/.test(v || ''); }
+function check(r) {
+  const vin = String(r.vin || '').toUpperCase();
+  if (r.dup || rows.some(x => x !== r && String(x.vin).toUpperCase() === vin && rows.indexOf(x) < rows.indexOf(r))) return ['bad', 'Trùng số khung'];
+  if (!vOk(r.vin)) return ['warn', 'Kiểm tra số khung'];
+  if (!String(r.kh || '').trim()) return ['warn', 'Thiếu tên khách'];
+  if (!dOk(r.ngay)) return ['warn', 'Kiểm tra ngày HĐ'];
+  if (!r.sale) return ['warn', r._amb ? 'Chọn đúng sale' : 'Chọn sale'];
+  return ['ok', 'Hợp lệ'];
+}
+function renderRv() {
+  if (!rows.length) { $('#rvBody').innerHTML = '<tr><td colspan="11"><div class="empty">Chọn file PDF hóa đơn để bắt đầu.</div></td></tr>'; return count(); }
+  const opt = (r) => '<option value="">— Chọn —</option>' + staff.map(s => `<option${s.ten === r.sale ? ' selected' : ''}${r._amb && r._amb.includes(s.ten) ? ' style="font-weight:700"' : ''}>${esc(s.ten)}</option>`).join('');
+  const lo = (r) => '<option value=""></option>' + LOAI.concat(r.loai && !LOAI.includes(r.loai) ? [r.loai] : []).map(l => `<option${l === r.loai ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  $('#rvBody').innerHTML = rows.map((r, i) => {
+    const [k, t] = check(r);
+    return `<tr data-i="${i}">
+      <td class="small" style="max-width:120px">${r.file ? `<a href="#" data-txt="${i}" title="Xem chữ đọc được">${esc(r.file)}</a>` : '<span class="muted">Nhập tay</span>'}</td>
+      <td><input class="inp" data-k="kh" value="${esc(r.kh)}" style="min-width:150px"></td>
+      <td><input class="inp mono" data-k="vin" value="${esc(r.vin)}" style="min-width:150px"></td>
+      <td><select class="inp" data-k="loai">${lo(r)}</select></td>
+      <td><input class="inp" data-k="mau" value="${esc(r.mau)}" style="width:72px"></td>
+      <td><input class="inp mono" data-k="ngay" value="${esc(r.ngay)}" placeholder="dd/mm/yyyy" style="width:104px"></td>
+      <td><input class="inp mono" data-k="soHd" value="${esc(r.soHd)}" style="width:86px"></td>
+      <td><input class="inp mono" data-k="gia" value="${esc(r.gia ? num(r.gia) : '')}" style="width:110px;text-align:right"></td>
+      <td><select class="inp" data-k="sale" style="min-width:150px">${opt(r)}</select>${r.tenGoc ? `<span class="sub2 small muted">Zalo: ${esc(r.tenGoc)}</span>` : ''}</td>
+      <td><span class="chip ${k}">${t}</span></td>
+      <td><button class="btn sm" data-del="${i}" title="Bỏ dòng">✕</button></td>
+    </tr>`;
+  }).join('');
+  count();
+}
+function count() {
+  const c = { ok: 0, warn: 0, bad: 0 };
+  rows.forEach(r => c[check(r)[0]]++);
+  $('#cOk').textContent = c.ok + ' hợp lệ'; $('#cWarn').textContent = c.warn + ' cần sửa'; $('#cBad').textContent = c.bad + ' trùng';
+  $('#btnSave').textContent = 'LƯU ' + c.ok + ' XE'; $('#btnSave').disabled = !c.ok;
+}
+$('#rvBody').addEventListener('change', e => {
+  const el = e.target.closest('[data-k]'); if (!el) return;
+  const r = rows[+el.closest('tr').dataset.i];
+  let v = el.value.trim();
+  if (el.dataset.k === 'vin') v = v.toUpperCase().replace(/\s/g, '');
+  if (el.dataset.k === 'gia') v = Number(v.replace(/[^\d]/g, '')) || '';
+  if (el.dataset.k === 'vin') r.dup = false;
+  r[el.dataset.k] = v; renderRv();
+});
+$('#rvBody').addEventListener('click', e => {
+  const d = e.target.closest('[data-del]'); if (d) { rows.splice(+d.dataset.del, 1); return renderRv(); }
+  const t = e.target.closest('[data-txt]'); if (t) { e.preventDefault(); $('#txtBody').textContent = rows[+t.dataset.txt].text || '(trống)'; $('#txtDlg').hidden = false; }
+});
+$('#btnAdd').onclick = () => { rows.push({ file: '', kh: '', vin: '', loai: '', mau: '', ngay: '', soHd: '', gia: '', sale: '', tenGoc: '' }); renderRv(); };
+$('#btnSave').onclick = () => {
+  const ok = rows.filter(r => check(r)[0] === 'ok');
+  if (!ok.length) return;
+  busy($('#btnSave'), 'Đang lưu', async () => {
+    try {
+      const r = await call('importCars', PIN, ok.map(x => ({ vin: x.vin, kh: x.kh, loai: x.loai, soLoai: x.soLoai || '', mau: x.mau, ngay: x.ngay, soHd: x.soHd, hopDong: x.hopDong || '', gia: x.gia, sale: x.sale, tenGoc: x.tenGoc, fileId: x.fileId || '' })));
+      const skipVin = new Set(r.skip.map(s => s.vin));
+      rows = rows.filter(x => !ok.includes(x) || skipVin.has(String(x.vin).toUpperCase()));
+      r.skip.forEach(s => { const x = rows.find(y => String(y.vin).toUpperCase() === s.vin); if (x && s.ly === 'Trùng số khung') x.dup = true; });
+      renderRv();
+      toast('Đã lưu ' + r.saved + ' xe' + (r.skip.length ? ' · bỏ qua ' + r.skip.length : ''));
+      if (r.saved) { $('#zalo').value = ''; loadCavet(); }
+    } catch (e) { toast(e, 1); }
+  });
+};
+
+/* ---------- File Excel chị Trâm → SĐT ---------- */
+$('#xlsIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!window.XLSX) return toast('Đang tải bộ đọc Excel, vui lòng thử lại.', 1);
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+    const pairs = [];
+    wb.SheetNames.forEach(n => {
+      const a = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '' });
+      const hi = a.findIndex(r => r.some(c => /khung/.test(norm(c))) && r.some(c => /^(sdt|so dien thoai|dien thoai)/.test(norm(c))));
+      if (hi < 0) return;
+      const h = a[hi].map(norm);
+      const cv = h.findIndex(c => /khung/.test(c)), cs = h.findIndex(c => /^(sdt|so dien thoai|dien thoai)/.test(c));
+      a.slice(hi + 1).forEach(r => { if (r[cv] && r[cs]) pairs.push({ vin: String(r[cv]).trim(), sdt: String(r[cs]).trim() }); });
+    });
+    if (!pairs.length) return toast('Không thấy cột Số khung và SĐT trong file.', 1);
+    const r = await call('importPhones', PIN, pairs);
+    toast('Đã thêm ' + r.filled + ' SĐT · ' + r.had + ' xe đã có số · ' + r.notFound + ' xe chưa có trong app');
+  } catch (err) { toast(String(err), 1); }
+};
+
+if (PIN) start(); else showLogin();
+</script>
+</body>
+</html>
