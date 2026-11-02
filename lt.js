@@ -212,7 +212,7 @@
     const me = D.me, x = printCache[p.id] || {};
     const di = isoToVn(p.diDk) || {}, ve = isoToVn(p.veDk) || {};
     const val = (s, cls) => `<span class="lt-v${cls ? ' ' + cls : ''}">${s ? esc(s) : '&nbsp;'}</span>`;
-    const chucVu = me.vaiTro === 'Sale' ? 'Nhân viên bán hàng' : me.vaiTro === 'Quản lý' ? 'Quản lý' : 'Nhân viên';
+    const chucVu = me.vaiTro === 'Sale' ? 'Nhân viên bán hàng' : me.vaiTro || 'Nhân viên';
     const khach = p.muc === 'Khách lái thử';
     const lenh = `<div class="tnr" style="display:flex;flex-direction:column;gap:9px;font-size:13.5px">
       <div style="display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:12px"><span>NHÀ MÁY Ô TÔ THƯƠNG MẠI SAMCO<br><b>SAMCO BÌNH TÂN</b></span><span><b>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>Độc Lập – Tự Do – Hạnh Phúc</b></span></div>
