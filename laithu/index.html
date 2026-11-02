@@ -28,7 +28,7 @@
 <script src="../config.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
-<script src="../lt.js?v=1.2.4"></script>
+<script src="../lt.js?v=1.2.6"></script>
 <script>
 let ten = store.get('laithu_ten') || '';
 const auth = () => ({ ten });
@@ -36,7 +36,9 @@ LT.mount($('#ltRoot'), { auth, base: '../', onAuthFail: e => { toast('Vui lòng 
 (async () => {
   try {
     const ds = await call('ltStaff');
-    $('#who').innerHTML = '<option value="">— Chọn tên —</option>' + ds.map(s => `<option value="${esc(s.ten)}"${s.ten === ten ? ' selected' : ''}>${esc(s.ten)} · ${esc(s.boPhan)}</option>`).join('');
+    const nhom = {}; ds.forEach(s => (nhom[s.boPhan || 'Khác'] = nhom[s.boPhan || 'Khác'] || []).push(s));
+    $('#who').innerHTML = '<option value="">— Chọn tên —</option>' + Object.keys(nhom).map(b => `<optgroup label="${esc(b)}">` +
+      nhom[b].map(s => `<option value="${esc(s.ten)}"${s.ten === ten ? ' selected' : ''}>${esc(s.ten)}</option>`).join('') + '</optgroup>').join('');
     if (!ds.some(s => s.ten === ten)) ten = '';
     $('#ltRoot').hidden = !ten; if (ten) LT.load();
   } catch (e) { $('#who').innerHTML = '<option value="">Không tải được</option>'; toast(e, 1); }
