@@ -57,6 +57,12 @@
   .dv-page{width:210mm;min-height:297mm;box-sizing:border-box;padding:12mm 18mm;font-family:"Times New Roman",Tinos,serif;font-size:14px;color:#111;background:#fff;display:flex;flex-direction:column;gap:10px}
   .dv-page table{border-collapse:collapse;width:100%}
   .dv-page td,.dv-page th{border:1px solid #111;padding:2px 6px;text-align:center}
+  .so-page{width:297mm;box-sizing:border-box;padding:8mm 10mm;font-family:"Times New Roman",Tinos,serif;font-size:12.5px;color:#111;background:#fff;page-break-after:always}
+  .so-page:last-child{page-break-after:auto}
+  .so-page table{border-collapse:collapse;width:100%}
+  .so-page th,.so-page td{border:1px solid #111;padding:3px 4px;text-align:center;vertical-align:middle}
+  .so-page thead{display:table-header-group}
+  .so-page tr{page-break-inside:avoid}
   .rep{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:800px){.rep{grid-template-columns:1fr}}
 </style>
@@ -183,6 +189,7 @@
       <button class="btn pri" id="btnDvNew">Lệnh dịch vụ</button>
       <button class="btn out" id="btnSac">Ghi sạc pin</button>
       <button class="btn" id="btnLtAdd">+ Thêm lượt không có phiếu</button>
+      <button class="btn out" id="btnSo">Sổ nhật trình</button>
       <a class="btn" href="laithu/" target="_blank" rel="noopener" style="margin-left:auto">Link bộ phận khác ↗</a>
     </div>
     <div id="dvOpen"></div>
@@ -244,6 +251,19 @@
     <button class="btn block" onclick="$('#txtDlg').hidden=true">Đóng</button>
   </div>
 </div>
+
+<div class="sheet-bg" id="soDlg" hidden><div class="sheet" style="max-width:560px"><div class="grab"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:24px;text-transform:uppercase">Sổ nhật trình</span><button class="btn sm" onclick="closeDlg('soDlg')">Đóng</button></div>
+  <span class="lbl">Xe cần in · mỗi xe một sổ riêng</span>
+  <div id="soCars" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+  <div style="display:flex;gap:8px"><button class="btn sm" id="soAll">Chọn hết</button><button class="btn sm" id="soNone">Bỏ hết</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="field"><span class="lbl">Từ ngày</span><input class="inp" type="date" id="soTu"></div>
+    <div class="field"><span class="lbl">Đến ngày</span><input class="inp" type="date" id="soDen"></div>
+  </div>
+  <span class="hint">In khổ A4 ngang. Ở hộp thoại in chọn "Lưu dưới dạng PDF" nếu cần gửi file.</span>
+  <button class="btn pri block" id="soGo">In sổ nhật trình</button>
+</div></div>
 
 <div class="sheet-bg" id="dvDlg" hidden><div class="sheet" style="max-width:760px"><div class="grab"></div>
   <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:24px;text-transform:uppercase">Lệnh dịch vụ</span><button class="btn sm" onclick="closeDlg('dvDlg')">Đóng</button></div>
@@ -880,6 +900,42 @@ function printDv(d) {
   </div>`;
   setTimeout(() => window.print(), 150);
 }
+
+/* Sổ nhật trình theo xe */
+$('#btnSo').onclick = () => {
+  if (!LQ) return;
+  $('#soCars').innerHTML = LQ.cars.map(c => `<label class="chk" style="display:flex;gap:6px;align-items:center"><input type="checkbox" value="${esc(c.bien)}" checked> ${esc(c.loai)} · ${esc(c.bien)}</label>`).join('');
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  if (!$('#soDen').value) $('#soDen').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  if (!$('#soTu').value) $('#soTu').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-01';
+  $('#soDlg').hidden = false;
+};
+$('#soAll').onclick = () => $$('#soCars input').forEach(i => i.checked = true);
+$('#soNone').onclick = () => $$('#soCars input').forEach(i => i.checked = false);
+$('#soGo').onclick = async () => {
+  const biens = $$('#soCars input:checked').map(i => i.value), tu = $('#soTu').value, den = $('#soDen').value;
+  if (!biens.length) return toast('Chọn ít nhất 1 xe', 'bad');
+  if (tu && den && tu > den) return toast('Từ ngày phải trước Đến ngày', 'bad');
+  try { await busy($('#soGo'), 'Đang lấy dữ liệu…', async () => {
+    const data = await call('adminSoNhatTrinh', PIN, biens, tu, den);
+    const vn = s => s ? s.split('-').reverse().join('/') : '';
+    const pages = data.map(x => `<div class="so-page">
+      <div style="text-align:center;font-size:20px;font-weight:700">SỔ NHẬT TRÌNH XE LÁI THỬ</div>
+      <div style="text-align:center;margin:2px 0 8px">Xe ${esc(x.loai)} · Biển số ${esc(x.bien)} — Từ ngày ${vn(tu) || '…'} đến ngày ${vn(den) || '…'}</div>
+      <table><thead>
+        <tr><th rowspan="2" style="width:4%">STT</th><th rowspan="2" style="width:8%">Loại Xe</th><th rowspan="2" style="width:9%">Biển Số</th><th rowspan="2" style="width:15%">Người sử dụng</th><th rowspan="2" style="width:14%">Mục đích sử dụng</th><th colspan="2">Thời gian ra - vào cổng</th><th colspan="2">Số Km (ODO)</th><th rowspan="2" style="width:7%">Tình trạng xe trước lái thử</th><th colspan="2">Xác nhận</th></tr>
+        <tr><th style="width:9%">Ra</th><th style="width:9%">Vào</th><th style="width:5%">Số cũ</th><th style="width:5%">Số mới</th><th style="width:8%">Người sử dụng</th><th style="width:9%">Lễ Tân/ HCBH/ Bảo Vệ</th></tr>
+      </thead><tbody>${x.rows.length ? x.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(x.loai)}</td><td>${esc(x.bien)}</td><td style="text-align:left">${esc(r.nguoi)}</td><td style="text-align:left">${esc(r.muc)}</td><td>${esc(r.ra)}</td><td>${esc(r.vao)}</td><td>${esc(r.odoDi)}</td><td>${esc(r.odoVe)}</td><td>ĐẠT</td><td style="height:26px"></td><td></td></tr>`).join('') : '<tr><td colspan="12" style="padding:10px">Không có lượt sử dụng trong khoảng ngày này</td></tr>'}</tbody></table>
+    </div>`).join('');
+    let pr = $('#dvPrint'); if (!pr) { pr = document.createElement('div'); pr.id = 'dvPrint'; document.body.appendChild(pr); }
+    pr.innerHTML = pages;
+    let st = $('#soPg'); if (!st) { st = document.createElement('style'); st.id = 'soPg'; document.head.appendChild(st); }
+    st.textContent = '@media print{@page{size:A4 landscape;margin:0}}';
+    window.addEventListener('afterprint', () => { st.textContent = ''; }, { once: true });
+    closeDlg('soDlg');
+    setTimeout(() => window.print(), 150);
+  }); } catch (e) { toast(e.message, 'bad'); }
+};
 
 if (PIN) start(); else showLogin();
 </script>
