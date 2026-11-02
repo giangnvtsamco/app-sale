@@ -14,7 +14,7 @@
   .lt-san i{background:var(--ok)}.lt-san{color:var(--ok)}
   .lt-di i,.lt-dat i{background:var(--accent)}.lt-di,.lt-dat{color:var(--accent)}
   .lt-sac i{background:var(--warn)}.lt-sac{color:var(--warn)}
-  .lt-dv i,.lt-ngung i{background:var(--muted)}.lt-dv,.lt-ngung{color:var(--muted)}
+  .lt-dv i{background:var(--warn)}.lt-dv{color:var(--warn)}.lt-ngung i{background:var(--muted)}.lt-ngung{color:var(--muted)}
   .lt-log{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--line);padding:9px 0;font-size:13px}
   .lt-log .lech{font-size:12px;font-weight:700;color:var(--bad)}
   .lt-sec{display:flex;flex-direction:column;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
@@ -110,9 +110,9 @@
   async function openCar(bien) {
     const c = D.cars.find(x => x.bien === bien); if (!c) return;
     $('#ltCarTitle').textContent = c.loai + ' · ' + c.bien;
-    $('#ltCarInfo').innerHTML = `<span class="chip ${({ san: 'ok', sac: 'warn', di: 'acc', dat: 'acc' })[c.st] || 'mute'}">${esc(c.label)}</span>
+    $('#ltCarInfo').innerHTML = `<span class="chip ${({ san: 'ok', sac: 'warn', di: 'acc', dat: 'acc', dv: 'warn' })[c.st] || 'mute'}">${esc(c.label)}</span>
       <span class="small muted">ODO ${c.odo === '' ? '—' : num(c.odo)} · pin ${c.pin == null ? '—' : c.pin + '%'}</span>`;
-    const free = c.st === 'san' || c.st === 'sac';
+    const free = c.st === 'san' || c.st === 'sac' || c.st === 'dv';
     const mine = c.mine && c.phieu;
     $('#ltCarNew').hidden = !free && !mine;
     $('#ltCarNew').textContent = mine ? 'Phiếu của bạn · ODO · Trả xe' : 'Lập phiếu lái thử';

@@ -749,7 +749,7 @@ let LQ = null, ltSel = '';
 function openDlg(id) { $('#' + id).hidden = false; document.body.style.overflow = 'hidden'; }
 function closeDlg(id) { $('#' + id).hidden = true; document.body.style.overflow = ''; }
 $$('.sheet-bg').forEach(b => b.addEventListener('click', e => { if (e.target === b) closeDlg(b.id); }));
-const ST_CHIP = { san: 'ok', sac: 'warn', di: 'acc', dat: 'acc', dv: 'mute', ngung: 'mute' };
+const ST_CHIP = { san: 'ok', sac: 'warn', di: 'acc', dat: 'acc', dv: 'warn', ngung: 'mute' };
 
 async function loadLt(bien) {
   try {
@@ -777,7 +777,7 @@ async function loadLt(bien) {
     $('#dvOpen').innerHTML = LQ.dv.length ? `<div class="card" style="display:flex;flex-direction:column;gap:8px"><span class="sect">Xe đang ở Phòng Dịch vụ</span>${LQ.dv.map(d => `<div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px">
       <div class="small"><b>${esc(d.id)}</b> · giao ${esc(d.giao)}${d.nhanDk ? ' · hẹn nhận ' + esc(d.nhanDk) : ''} · ${esc(d.congViec)} <button class="btn sm" data-reprint="${esc(d.id)}" style="margin-left:6px">In lại</button></div>
       ${d.cho.map(x => `<div class="dv-row" data-lt="${esc(x.id)}"><b class="mono">${esc(x.bien)}</b>
-        <span style="display:flex;gap:6px"><input class="inp mono" data-k="odo" placeholder="ODO nhận lại" style="min-height:36px;max-width:150px" value="${esc(x.odoDi)}"><input class="inp mono" data-k="pin" placeholder="Pin %" style="min-height:36px;max-width:90px"></span>
+        <span style="display:flex;gap:6px"><input class="inp mono" data-k="odo" placeholder="ODO nhận lại" style="min-height:36px;max-width:150px" value="${esc(x.odoDi)}"><input class="inp mono" data-k="pin" placeholder="Pin % (nếu đổi)" style="min-height:36px;max-width:130px"></span>
         <button class="btn sm ok" data-nhan>Nhận lại xe</button></div>`).join('')}</div>`).join('')}</div>` : '';
   } catch (e) {
     if (/PIN/.test(String(e))) { try { sessionStorage.removeItem('appsale_admin'); } catch (x) {} toast(e, 1); return showLogin(); }
@@ -803,7 +803,7 @@ $('#dvOpen').addEventListener('click', e => {
   const rp = e.target.closest('[data-reprint]'); if (rp) { const d = LQ.dv.find(x => x.id === rp.dataset.reprint); return printDv(dvFromRecord(d)); }
   const b = e.target.closest('[data-nhan]'); if (!b) return;
   const row = b.closest('[data-lt]');
-  const pin = $('[data-k=pin]', row).value.trim(); if (!pin) return toast('Vui lòng nhập % pin lúc nhận lại.', 1);
+  const pin = $('[data-k=pin]', row).value.trim();
   busy(b, '', async () => {
     try { await call('adminDvReturn', PIN, row.dataset.lt, { odoVe: $('[data-k=odo]', row).value, pin }); toast('Đã nhận lại xe'); loadLt(); }
     catch (err) { toast(err, 1); }
