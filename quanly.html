@@ -46,6 +46,17 @@
   .steps .done i{background:var(--accent)} .steps .cur{font-weight:800} .steps div:not(.done){color:var(--muted)}
   .cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media (max-width:800px){.cols2{grid-template-columns:1fr}}
+  /* Lái thử */
+  .lt-tbl tr{cursor:pointer}
+  .lt-tbl tr.on td{background:var(--accent-soft)}
+  .lg td.lech input{border-color:var(--bad);background:var(--bad-soft)}
+  .lg input.inp{width:86px;min-height:32px;font-size:13px;padding:0 6px;border-radius:8px;font-family:var(--mono)}
+  .dv-row{display:grid;grid-template-columns:110px 1fr 150px;gap:8px;align-items:center}
+  #dvPrint{display:none}
+  @media print{ @page{size:A4;margin:0} body>*:not(#dvPrint){display:none!important} #dvPrint{display:block!important} }
+  .dv-page{width:210mm;min-height:297mm;box-sizing:border-box;padding:12mm 18mm;font-family:"Times New Roman",Tinos,serif;font-size:14px;color:#111;background:#fff;display:flex;flex-direction:column;gap:10px}
+  .dv-page table{border-collapse:collapse;width:100%}
+  .dv-page td,.dv-page th{border:1px solid #111;padding:2px 6px;text-align:center}
   .rep{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:800px){.rep{grid-template-columns:1fr}}
 </style>
@@ -78,6 +89,7 @@
     <div class="tabs-top" id="tabs">
       <button class="on" data-v="Cavet">Cavet</button>
       <button data-v="BaoHiem">Bảo hiểm</button>
+      <button data-v="LaiThu">Lái thử</button>
       <button data-v="NhapXe">Nhập xe</button>
       <button id="btnOut">Thoát</button>
     </div>
@@ -165,6 +177,23 @@
     </div>
   </section>
 
+  <!-- ===== LÁI THỬ ===== -->
+  <section id="vLaiThu" style="display:flex;flex-direction:column;gap:14px" hidden>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn pri" id="btnDvNew">Lệnh dịch vụ</button>
+      <button class="btn out" id="btnSac">Ghi sạc pin</button>
+      <button class="btn" id="btnLtAdd">+ Thêm lượt không có phiếu</button>
+      <a class="btn" href="laithu/" target="_blank" rel="noopener" style="margin-left:auto">Link bộ phận khác ↗</a>
+    </div>
+    <div id="dvOpen"></div>
+    <div class="tbl-wrap"><table class="tbl lt-tbl"><thead><tr><th>Xe</th><th>Biển số</th><th class="num">ODO</th><th class="num">Pin</th><th>Tình trạng</th><th class="num">Chuyến tháng</th><th class="num">Km tháng</th><th class="num">ODO lệch</th><th>Dùng gần nhất</th></tr></thead><tbody id="ltCars"><tr><td colspan="9"><div class="loading"><span class="spin"></span>Đang tải…</div></td></tr></tbody></table></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap">
+      <span class="sect" id="lgHead">Nhật trình</span>
+      <span class="hint">Ô đỏ: ODO đi khác lần trả trước. Sửa ODO phải ghi lý do; Sheet lưu lại giá trị cũ.</span>
+    </div>
+    <div class="tbl-wrap"><table class="tbl lg"><thead><tr><th>Ngày</th><th>Người dùng</th><th>Mục đích</th><th>Giờ</th><th>ODO đi</th><th>ODO về</th><th class="num">Km</th><th class="num">Pin</th><th>Nguồn</th><th>Ghi chú · lý do</th><th></th></tr></thead><tbody id="lgBody"></tbody></table></div>
+  </section>
+
   <!-- ===== NHẬP XE ===== -->
   <section id="vNhapXe" style="display:flex;flex-direction:column;gap:14px" hidden>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
@@ -216,6 +245,57 @@
   </div>
 </div>
 
+<div class="sheet-bg" id="dvDlg" hidden><div class="sheet" style="max-width:760px"><div class="grab"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:24px;text-transform:uppercase">Lệnh dịch vụ</span><button class="btn sm" onclick="closeDlg('dvDlg')">Đóng</button></div>
+  <span class="lbl">Xe · tick xe cần làm, ghi chú riêng từng xe</span>
+  <div id="dvCars" style="display:flex;flex-direction:column;gap:6px"></div>
+  <button class="btn sm" id="dvAddOther" style="align-self:flex-start">+ Xe khác (không thuộc xe demo)</button>
+  <div class="field"><span class="lbl">Công việc cụ thể <span class="req">*</span></span>
+    <div class="pills" id="dvMau">
+      <button class="pill" data-v="Rửa, vệ sinh ngoại thất và nội thất xe.">Rửa, vệ sinh trong ngoài</button>
+      <button class="pill" data-v="Rửa ngoại thất xe.">Rửa ngoại thất</button>
+      <button class="pill" data-v="Cập nhật phần mềm mới nhất theo tiêu chuẩn VinFast cho xe lái thử.">Cập nhật phần mềm</button>
+      <button class="pill" data-v="Kiểm tra, sửa chữa: ">Kiểm tra, sửa chữa</button>
+      <button class="pill" data-v="Chi tiết như trên">Chi tiết như trên</button>
+    </div>
+    <textarea class="inp" id="dvViec" style="min-height:64px"></textarea></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <label class="field"><span class="lbl">Giao xe cho phòng dịch vụ</span><input class="inp mono" type="date" id="dvGiao"></label>
+    <label class="field"><span class="lbl">Nhận lại xe hoàn chỉnh</span><input class="inp mono" type="date" id="dvNhan"><span class="hint">Để trống: in “.../.../2026”</span></label></div>
+  <label class="field"><span class="lbl">Chi phí trên được tính cho</span><input class="inp" id="dvChiPhi" value="Phòng kinh doanh xe mới (chi phí nội bộ)"></label>
+  <label class="field"><span class="lbl">Ghi chú</span><input class="inp" id="dvGhi" value="Nhờ Phòng Dịch vụ kiểm tra."></label>
+  <label class="check"><input type="checkbox" id="dvGiu" checked>Giao xe cho dịch vụ: xe hiện “Dịch vụ”, sale không lấy được đến khi nhận lại</label>
+  <button class="btn cta pri" id="dvSave">Lưu và in lệnh</button>
+</div></div>
+
+<div class="sheet-bg" id="sacDlg" hidden><div class="sheet"><div class="grab"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:24px;text-transform:uppercase">Ghi sạc pin</span><button class="btn sm" onclick="closeDlg('sacDlg')">Đóng</button></div>
+  <label class="field"><span class="lbl">Xe <span class="req">*</span></span><select class="inp" id="sacXe"></select></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+    <label class="field"><span class="lbl">Pin % sau sạc <span class="req">*</span></span><input class="inp mono" id="sacPin" inputmode="numeric"></label>
+    <label class="field"><span class="lbl">ODO trước</span><input class="inp mono" id="sacDi" inputmode="numeric"></label>
+    <label class="field"><span class="lbl">ODO sau</span><input class="inp mono" id="sacVe" inputmode="numeric"></label></div>
+  <span class="hint">Xe không chạy thì để ODO như cũ. Có chạy đến trạm sạc thì ghi ODO sau để nhật trình không bị lệch.</span>
+  <label class="field"><span class="lbl">Ghi chú</span><input class="inp" id="sacGhi" placeholder="VD: Sạc tại trạm VinFast showroom"></label>
+  <button class="btn cta pri" id="sacSave">Lưu</button>
+</div></div>
+
+<div class="sheet-bg" id="addDlg" hidden><div class="sheet"><div class="grab"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:22px;text-transform:uppercase">Thêm lượt không có phiếu</span><button class="btn sm" onclick="closeDlg('addDlg')">Đóng</button></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <label class="field"><span class="lbl">Xe <span class="req">*</span></span><select class="inp" id="addXe"></select></label>
+    <label class="field"><span class="lbl">Mục đích</span><select class="inp" id="addMuc"></select></label></div>
+  <label class="field"><span class="lbl">Người dùng <span class="req">*</span></span><input class="inp" id="addNguoi" placeholder="VD: Ban Giám đốc"></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <label class="field"><span class="lbl">Giờ đi <span class="req">*</span></span><input class="inp mono" type="datetime-local" id="addDi"></label>
+    <label class="field"><span class="lbl">Giờ về <span class="req">*</span></span><input class="inp mono" type="datetime-local" id="addVe"></label>
+    <label class="field"><span class="lbl">ODO đi <span class="req">*</span></span><input class="inp mono" id="addOdoDi" inputmode="numeric"></label>
+    <label class="field"><span class="lbl">ODO về <span class="req">*</span></span><input class="inp mono" id="addOdoVe" inputmode="numeric"></label></div>
+  <label class="field"><span class="lbl">Nội dung</span><input class="inp" id="addNoiDung"></label>
+  <label class="field"><span class="lbl">Lý do thêm <span class="req">*</span></span><input class="inp" id="addLyDo" placeholder="VD: Đi không phiếu"></label>
+  <button class="btn cta pri" id="addSave">Thêm lượt</button>
+</div></div>
+
 <script src="config.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
@@ -239,6 +319,7 @@ function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCa
 const VIEW = {
   Cavet: ['Đối chiếu cavet', 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành'],
   BaoHiem: ['Xử lý bảo hiểm', 'Chọn đơn vị · phân loại · theo dõi từng bước'],
+  LaiThu: ['Xe lái thử', 'Nhật trình · sửa ODO · sạc pin · lệnh dịch vụ'],
   NhapXe: ['Nhập xe', 'Từ hóa đơn kế toán · dùng chung Cavet và Bảo hiểm']
 };
 $('#tabs').onclick = e => {
@@ -248,6 +329,7 @@ $('#tabs').onclick = e => {
   Object.keys(VIEW).forEach(k => $('#v' + k).hidden = k !== v);
   $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
   if (v === 'BaoHiem') loadBh();
+  if (v === 'LaiThu') loadLt();
 };
 
 /* ---------- Cavet ---------- */
@@ -641,6 +723,163 @@ $('#btnTam').onclick = () => busy($('#btnTam'), '', async () => {
 $('#btnBcSheet').onclick = () => busy($('#btnBcSheet'), 'Đang cập nhật', async () => {
   try { await call('adminRefresh', PIN); toast('Đã cập nhật sheet BC_BaoHiem và BC_Cavet'); } catch (e) { toast(e, 1); }
 });
+
+/* ================= LÁI THỬ ================= */
+let LQ = null, ltSel = '';
+function openDlg(id) { $('#' + id).hidden = false; document.body.style.overflow = 'hidden'; }
+function closeDlg(id) { $('#' + id).hidden = true; document.body.style.overflow = ''; }
+$$('.sheet-bg').forEach(b => b.addEventListener('click', e => { if (e.target === b) closeDlg(b.id); }));
+const ST_CHIP = { san: 'ok', sac: 'warn', di: 'acc', dat: 'acc', dv: 'mute', ngung: 'mute' };
+
+async function loadLt(bien) {
+  try {
+    LQ = await call('adminLaiThu', PIN, bien || ltSel || '');
+    ltSel = LQ.bien;
+    $('#ltCars').innerHTML = LQ.cars.map(c => `<tr data-bien="${esc(c.bien)}" class="${c.bien === ltSel ? 'on' : ''}">
+      <td><b>${esc(c.loai)}</b></td><td class="mono">${esc(c.bien)}</td><td class="num">${c.odo === '' ? '—' : num(c.odo)}</td><td class="num">${c.pin == null ? '—' : c.pin + '%'}</td>
+      <td><span class="chip ${ST_CHIP[c.st] || 'mute'}">${esc(c.label)}</span></td><td class="num">${c.chuyen}</td><td class="num">${num(c.km)}</td>
+      <td class="num" style="${c.lech ? 'color:var(--bad);font-weight:700' : ''}">${c.lech}</td><td class="small">${esc(c.cuoi || '—')}${c.ngayCuoi && LQ.today - c.ngayCuoi > 30 ? ' <b style="color:var(--warn)">· ' + (LQ.today - c.ngayCuoi) + ' ngày chưa dùng</b>' : ''}</td></tr>`).join('');
+    const car = LQ.cars.find(c => c.bien === ltSel) || {};
+    $('#lgHead').textContent = 'Nhật trình · ' + (car.loai || '') + ' ' + ltSel;
+    $('#lgBody').innerHTML = LQ.rows.length ? LQ.rows.map(r => {
+      const chip = { 'Sale': 'mute', 'Giang sửa': 'warn', 'Giang thêm': 'acc', 'Giang': 'acc' }[r.nguon] || 'mute';
+      const edit = r.trangThai === 'Đã trả';
+      return `<tr data-id="${esc(r.id)}" data-di="${esc(r.odoDi)}" data-ve="${esc(r.odoVe)}">
+        <td class="mono">${esc(r.ngay)}</td><td>${esc(r.nguoi)}</td><td>${esc(r.muc)}${r.kh ? '<span class="sub2">' + esc(r.kh) + '</span>' : ''}</td>
+        <td class="mono small">${esc(r.gioDi)}${r.gioVe ? '–' + esc(r.gioVe) : ''}</td>
+        <td class="${r.lech ? 'lech' : ''}">${edit ? `<input class="inp" data-k="di" value="${esc(r.odoDi)}">` : esc(r.odoDi || '—')}</td>
+        <td>${edit ? `<input class="inp" data-k="ve" value="${esc(r.odoVe)}">` : '<span class="chip acc">' + esc(r.trangThai) + '</span>'}</td>
+        <td class="num">${esc(r.km)}</td><td class="num">${r.pin === '' || r.pin == null ? '' : esc(r.pin) + '%'}</td>
+        <td><span class="chip ${chip}">${esc(r.nguon)}</span></td>
+        <td class="small">${r.lech ? '<b style="color:var(--bad)">' + esc(r.lech) + '</b><br>' : ''}${esc(r.lyDo || r.ghiChu || r.loTrinh || '')}</td>
+        <td><button class="btn sm" data-save hidden>Lưu</button></td></tr>`;
+    }).join('') : '<tr><td colspan="11"><div class="empty">Chưa có chuyến nào.</div></td></tr>';
+    $('#dvOpen').innerHTML = LQ.dv.length ? `<div class="card" style="display:flex;flex-direction:column;gap:8px"><span class="sect">Xe đang ở Phòng Dịch vụ</span>${LQ.dv.map(d => `<div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px">
+      <div class="small"><b>${esc(d.id)}</b> · giao ${esc(d.giao)}${d.nhanDk ? ' · hẹn nhận ' + esc(d.nhanDk) : ''} · ${esc(d.congViec)} <button class="btn sm" data-reprint="${esc(d.id)}" style="margin-left:6px">In lại</button></div>
+      ${d.cho.map(x => `<div class="dv-row" data-lt="${esc(x.id)}"><b class="mono">${esc(x.bien)}</b>
+        <span style="display:flex;gap:6px"><input class="inp mono" data-k="odo" placeholder="ODO nhận lại" style="min-height:36px;max-width:150px" value="${esc(x.odoDi)}"><input class="inp mono" data-k="pin" placeholder="Pin %" style="min-height:36px;max-width:90px"></span>
+        <button class="btn sm ok" data-nhan>Nhận lại xe</button></div>`).join('')}</div>`).join('')}</div>` : '';
+  } catch (e) {
+    if (/PIN/.test(String(e))) { try { sessionStorage.removeItem('appsale_admin'); } catch (x) {} toast(e, 1); return showLogin(); }
+    $('#ltCars').innerHTML = `<tr><td colspan="9"><div class="empty">${esc(e)}</div></td></tr>`;
+  }
+}
+$('#ltCars').onclick = e => { const tr = e.target.closest('tr[data-bien]'); if (tr) loadLt(tr.dataset.bien); };
+$('#lgBody').addEventListener('input', e => {
+  const tr = e.target.closest('tr'); if (!tr) return;
+  const ch = $('[data-k=di]', tr).value !== tr.dataset.di || $('[data-k=ve]', tr).value !== tr.dataset.ve;
+  $('[data-save]', tr).hidden = !ch;
+});
+$('#lgBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-save]'); if (!b) return;
+  const tr = b.closest('tr');
+  const lyDo = prompt('Lý do sửa ODO (bắt buộc):', ''); if (!lyDo) return;
+  busy(b, '', async () => {
+    try { await call('adminLtEdit', PIN, tr.dataset.id, { odoDi: $('[data-k=di]', tr).value, odoVe: $('[data-k=ve]', tr).value, lyDo }); toast('Đã sửa'); loadLt(); }
+    catch (err) { toast(err, 1); }
+  });
+});
+$('#dvOpen').addEventListener('click', e => {
+  const rp = e.target.closest('[data-reprint]'); if (rp) { const d = LQ.dv.find(x => x.id === rp.dataset.reprint); return printDv(dvFromRecord(d)); }
+  const b = e.target.closest('[data-nhan]'); if (!b) return;
+  const row = b.closest('[data-lt]');
+  const pin = $('[data-k=pin]', row).value.trim(); if (!pin) return toast('Vui lòng nhập % pin lúc nhận lại.', 1);
+  busy(b, '', async () => {
+    try { await call('adminDvReturn', PIN, row.dataset.lt, { odoVe: $('[data-k=odo]', row).value, pin }); toast('Đã nhận lại xe'); loadLt(); }
+    catch (err) { toast(err, 1); }
+  });
+});
+
+/* Ghi sạc pin */
+$('#btnSac').onclick = () => {
+  if (!LQ) return;
+  $('#sacXe').innerHTML = LQ.cars.map(c => `<option value="${esc(c.bien)}"${c.bien === ltSel ? ' selected' : ''}>${esc(c.loai)} · ${esc(c.bien)}</option>`).join('');
+  const fill = () => { const c = LQ.cars.find(x => x.bien === $('#sacXe').value) || {}; $('#sacDi').value = c.odo === '' ? '' : c.odo; $('#sacVe').value = c.odo === '' ? '' : c.odo; };
+  $('#sacXe').onchange = fill; fill(); $('#sacPin').value = ''; $('#sacGhi').value = '';
+  openDlg('sacDlg');
+};
+$('#sacSave').onclick = () => busy($('#sacSave'), 'Đang lưu', async () => {
+  try { await call('adminLtCharge', PIN, $('#sacXe').value, { pin: $('#sacPin').value, odoDi: $('#sacDi').value, odoVe: $('#sacVe').value, ghiChu: $('#sacGhi').value }); closeDlg('sacDlg'); toast('Đã ghi sạc pin'); loadLt($('#sacXe').value); }
+  catch (e) { toast(e, 1); }
+});
+
+/* Thêm lượt không có phiếu */
+$('#btnLtAdd').onclick = () => {
+  if (!LQ) return;
+  $('#addXe').innerHTML = LQ.cars.map(c => `<option value="${esc(c.bien)}"${c.bien === ltSel ? ' selected' : ''}>${esc(c.loai)} · ${esc(c.bien)}</option>`).join('');
+  $('#addMuc').innerHTML = LQ.mucDich.filter(m => m !== 'Dịch vụ').map(m => `<option>${esc(m)}</option>`).join('');
+  ['addNguoi', 'addDi', 'addVe', 'addOdoDi', 'addOdoVe', 'addNoiDung', 'addLyDo'].forEach(i => $('#' + i).value = '');
+  openDlg('addDlg');
+};
+$('#addSave').onclick = () => busy($('#addSave'), 'Đang lưu', async () => {
+  try {
+    await call('adminLtInsert', PIN, { bien: $('#addXe').value, mucDich: $('#addMuc').value, nguoi: $('#addNguoi').value, gioDi: $('#addDi').value, gioVe: $('#addVe').value,
+      odoDi: $('#addOdoDi').value, odoVe: $('#addOdoVe').value, noiDung: $('#addNoiDung').value, lyDo: $('#addLyDo').value });
+    closeDlg('addDlg'); toast('Đã thêm lượt'); loadLt($('#addXe').value);
+  } catch (e) { toast(e, 1); }
+});
+
+/* Lệnh dịch vụ */
+let dvOther = [];
+$('#btnDvNew').onclick = () => {
+  if (!LQ) return;
+  dvOther = [];
+  const t = new Date(); const iso = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  $('#dvGiao').value = iso; $('#dvNhan').value = ''; $('#dvViec').value = ''; $$('#dvMau .pill').forEach(p => p.classList.remove('on'));
+  renderDvCars(); openDlg('dvDlg');
+};
+function renderDvCars() {
+  $('#dvCars').innerHTML = LQ.cars.map(c => `<label class="dv-row" style="grid-template-columns:28px 150px 1fr"><input type="checkbox" data-bien="${esc(c.bien)}" data-loai="${esc(c.loai)}" style="width:20px;height:20px;accent-color:var(--accent)">
+      <span><b>${esc(c.loai)}</b> <span class="mono small">${esc(c.bien)}</span></span><input class="inp" data-ghi placeholder="Ghi chú xe này (không bắt buộc)" style="min-height:36px"></label>`).join('')
+    + dvOther.map((o, i) => `<div class="dv-row" style="grid-template-columns:28px 150px 1fr" data-other="${i}"><span></span>
+      <span style="display:flex;gap:4px"><input class="inp" data-k="loai" placeholder="Loại xe" value="${esc(o.loai)}" style="min-height:36px"><input class="inp mono" data-k="bien" placeholder="Biển số / số khung" value="${esc(o.bien)}" style="min-height:36px"></span>
+      <input class="inp" data-k="ghiChu" placeholder="Ghi chú" value="${esc(o.ghiChu)}" style="min-height:36px"></div>`).join('');
+}
+$('#dvAddOther').onclick = () => { pullOther(); dvOther.push({ loai: '', bien: '', ghiChu: '' }); const keep = keepChecks(); renderDvCars(); keep(); };
+function pullOther() { $$('#dvCars [data-other]').forEach(r => { const o = dvOther[+r.dataset.other]; ['loai', 'bien', 'ghiChu'].forEach(k => o[k] = $('[data-k=' + k + ']', r).value); }); }
+function keepChecks() { const st = $$('#dvCars input[type=checkbox]').map(c => [c.dataset.bien, c.checked, c.closest('label').querySelector('[data-ghi]').value]); return () => st.forEach(s => { const c = $('#dvCars input[data-bien="' + s[0] + '"]'); if (c) { c.checked = s[1]; c.closest('label').querySelector('[data-ghi]').value = s[2]; } }); }
+$('#dvMau').onclick = e => { const p = e.target.closest('.pill'); if (!p) return; $$('#dvMau .pill').forEach(x => x.classList.toggle('on', x === p)); $('#dvViec').value = p.dataset.v; $('#dvViec').focus(); };
+$('#dvSave').onclick = () => {
+  pullOther();
+  const xe = $$('#dvCars input[type=checkbox]').filter(c => c.checked).map(c => ({ bien: c.dataset.bien, loai: c.dataset.loai, ghiChu: c.closest('label').querySelector('[data-ghi]').value.trim() }))
+    .concat(dvOther.filter(o => o.bien.trim()).map(o => ({ bien: o.bien.trim(), loai: o.loai.trim(), ghiChu: o.ghiChu.trim() })));
+  if (!xe.length) return toast('Vui lòng chọn ít nhất 1 xe.', 1);
+  if (!$('#dvViec').value.trim()) return toast('Vui lòng nhập công việc cụ thể.', 1);
+  const d = { xe, congViec: $('#dvViec').value.trim(), giao: $('#dvGiao').value, nhanDk: $('#dvNhan').value, chiPhi: $('#dvChiPhi').value.trim(), ghiChu: $('#dvGhi').value.trim(), giuXe: $('#dvGiu').checked };
+  busy($('#dvSave'), 'Đang lưu', async () => {
+    try { const r = await call('adminDvCreate', PIN, d); closeDlg('dvDlg'); toast('Đã lưu ' + r.id); printDv(d); loadLt(); }
+    catch (e) { toast(e, 1); }
+  });
+};
+function dvFromRecord(d) {
+  const xe = d.xe.split('; ').filter(Boolean).map(s => { const m = s.match(/^(.*?)\s+(\S+)(?:\s+\((.*)\))?$/) || []; return { loai: m[1] || '', bien: m[2] || s, ghiChu: m[3] || '' }; });
+  const iso = s => { const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
+  return { xe, congViec: d.congViec, giao: iso(d.giao), nhanDk: iso(d.nhanDk), chiPhi: d.chiPhi, ghiChu: d.ghiChu };
+}
+function printDv(d) {
+  const vn = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? +m[3] + '/' + +m[2] + '/' + m[1] : ''; };
+  const g = String(d.giao || '').match(/^(\d{4})-(\d{2})-(\d{2})$/) || [];
+  const yy = g[1] || new Date().getFullYear();
+  let pr = $('#dvPrint'); if (!pr) { pr = document.createElement('div'); pr.id = 'dvPrint'; document.body.appendChild(pr); }
+  pr.innerHTML = `<div class="dv-page">
+    <div style="font-family:Arial,Arimo,sans-serif;font-size:11px;font-weight:700;line-height:1.4">NHÀ MÁY Ô TÔ THƯƠNG MẠI SAMCO<br><span style="padding-left:22px">VINFAST – SAMCO BÌNH TÂN</span></div>
+    <div style="font-family:Arial,Arimo,sans-serif;font-size:11px;padding-left:44px"><u>PHÒNG BÁN HÀNG</u></div>
+    <div style="text-align:center;font-size:17px;font-weight:700;padding-top:4px">PHIẾU ĐỀ NGHỊ DỊCH VỤ SỬA CHỮA NỘI BỘ</div>
+    <div><b><u>Kính gửi:</u> - Phòng Dịch vụ VINFAST SAMCO BÌNH TÂN</b></div>
+    <div>Phòng bán hàng đề nghị được hỗ trợ phần dịch vụ cho những xe lái thử sau:</div>
+    <table><thead><tr><th style="width:25%">Loại xe</th><th style="width:29%">Biển số</th><th>Ghi chú</th></tr></thead>
+      <tbody>${d.xe.map(x => `<tr><td>${esc(x.loai)}</td><td>${esc(x.bien)}</td><td>${esc(x.ghiChu)}</td></tr>`).join('')}</tbody></table>
+    <div style="padding-top:8px"><b>Công việc cụ thể:</b> ${esc(d.congViec)}</div>
+    <div><b>Thời gian giao xe cho phòng dịch vụ:</b> ${esc(vn(d.giao)) || '.../.../' + yy}</div>
+    <div><b>Thời gian nhận lại xe hoàn chỉnh:</b> ${esc(vn(d.nhanDk)) || '.../.../' + yy}</div>
+    <div><b>Chi phí trên được tính cho:</b> ${esc(d.chiPhi)}</div>
+    <div>Ghi chú: ${esc(d.ghiChu)}</div>
+    <div style="text-align:right;font-style:italic;padding-top:4px">TP.HCM, ngày ${g[3] ? +g[3] : '...'} tháng ${g[2] ? +g[2] : '...'} năm ${yy}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center"><b>Xác nhận P.Dịch Vụ</b><span>Xác nhận P.Bán Hàng</span><span>Nhân viên đề nghị</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;padding-top:70px"><span></span><span></span><span>Nguyễn Viết Trường Giang</span></div>
+  </div>`;
+  setTimeout(() => window.print(), 150);
+}
 
 if (PIN) start(); else showLogin();
 </script>

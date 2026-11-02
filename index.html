@@ -98,13 +98,13 @@
       <div class="list" id="bhList"><div class="loading"><span class="spin"></span>Đang tải…</div></div>
     </div>
   </section>
-  <section id="tabLaiThu" hidden><div class="soon-box"><div class="title">Xe lái thử</div><p>Tab đang hoàn thiện, sẽ mở sau tab Bảo hiểm.</p></div></section>
+  <section id="tabLaiThu" hidden><div id="ltRoot"></div></section>
 </main>
 
 <nav class="tabbar" id="tabbar" hidden>
   <button class="on" data-tab="Cavet">Cavet</button>
   <button data-tab="BaoHiem">Bảo hiểm</button>
-  <button data-tab="LaiThu">Lái thử<span class="soon">SẮP CÓ</span></button>
+  <button data-tab="LaiThu">Lái thử</button>
 </nav>
 
 <!-- CHI TIẾT XE -->
@@ -207,6 +207,7 @@
 <script src="config.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
+<script src="lt.js"></script>
 <script>
 const KEY = 'appsale_auth';
 let auth = store.get(KEY);
@@ -249,14 +250,15 @@ function startApp() {
   loadCavet();
 }
 
-let tab = 'Cavet';
+let tab = 'Cavet', ltMounted = false;
 $$('#tabbar button').forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   $$('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
   ['Cavet', 'BaoHiem', 'LaiThu'].forEach(k => $('#tab' + k).hidden = k !== tab);
   $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm', LaiThu: 'Xe lái thử' }[tab];
-  $('#pgSub').textContent = { Cavet: 'Hạn 20 ngày từ ngày hóa đơn', BaoHiem: 'Kích hoạt · báo trước 3 ngày làm việc', LaiThu: 'Sắp có' }[tab];
+  $('#pgSub').textContent = { Cavet: 'Hạn 20 ngày từ ngày hóa đơn', BaoHiem: 'Kích hoạt · báo trước 3 ngày làm việc', LaiThu: '10 xe demo · chọn xe để lấy' }[tab];
   if (tab === 'BaoHiem' && !BH) loadBh();
+  if (tab === 'LaiThu') { if (!ltMounted) { LT.mount($('#ltRoot'), { auth: () => auth, onAuthFail: e => { store.del(KEY); auth = null; toast(e, 1); showLogin(); } }); ltMounted = true; } LT.load(); }
   window.scrollTo(0, 0);
 });
 
@@ -513,7 +515,8 @@ $('#bhSend').onclick = () => {
 let lastLoad = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || !auth || $('#vApp').hidden || !$('#dlg').hidden || !$('#bhDlg').hidden || Date.now() - lastLoad < 60000) return;
-  if (tab === 'BaoHiem') loadBh(); else loadCavet();
+  if (document.querySelector('.sheet-bg:not([hidden])')) return;
+  if (tab === 'BaoHiem') loadBh(); else if (tab === 'LaiThu') { LT.load(); lastLoad = Date.now(); } else loadCavet();
 });
 
 /* ---------- Khởi động ---------- */
