@@ -117,35 +117,18 @@
     $('#ltCarNew').hidden = !free && !mine;
     $('#ltCarNew').textContent = mine ? 'Phiếu của bạn · ODO · Trả xe' : 'Lập phiếu lái thử';
     $('#ltCarNew').onclick = () => { closeS('ltCarDlg'); if (mine) openUse(c.phieu); else openForm(c, null); };
-    $('#ltLogList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải nhật trình…</div>';
+    $('#ltLogList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
     openS('ltCarDlg');
     try {
       const L = await api('ltLog', bien);
-      $('#ltLogHead').textContent = 'Nhật trình · ' + L.soChuyen + ' chuyến' + (L.soLech ? ' · ' + L.soLech + ' lần ODO lệch' : '');
-      LOG = L.rows; logShown = 0;
-      $('#ltLogList').innerHTML = L.rows.length ? '' : '<div class="empty">Chưa có chuyến nào.</div>';
-      moreLog();
+      const t = L.truoc;
+      $('#ltLogList').innerHTML = t ? `<div class="card flat" style="padding:4px 14px">
+          <div class="kv"><span>Người mượn</span><b>${esc(t.nguoi)}${t.muc ? ' · ' + esc(t.muc) : ''}</b></div>
+          <div class="kv"><span>Trả xe lúc</span><span class="mono">${esc(t.tra || '—')}</span></div>
+          <div class="kv"><span>ODO kết thúc</span><span class="mono b">${esc(t.odoVe || '—')}</span></div>
+          <div class="kv"><span>Pin kết thúc</span><span class="mono b">${t.pin === '' || t.pin == null ? '—' : esc(t.pin) + '%'}</span></div>
+        </div>` : '<div class="empty">Chưa có chuyến nào.</div>';
     } catch (e) { $('#ltLogList').innerHTML = `<div class="empty">${esc(e)}</div>`; }
-  }
-
-  /* Nhật trình: hiện 30 lượt, bấm "Xem thêm" để xem tiếp toàn bộ hành trình */
-  let LOG = [], logShown = 0;
-  function logRow(r) {
-    return `<div class="lt-log">
-      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(r.nguoi)}</b><span class="mono small">${esc(r.ngayFull || r.ngay)}</span></div>
-      <div class="small muted">${esc(r.muc)}${r.gioDi ? ' · ' + esc(r.gioDi) + (r.gioVe ? '–' + esc(r.gioVe) : '') : ''}${r.kh ? ' · ' + esc(r.kh) : ''}</div>
-      ${r.loTrinh ? `<div class="small">${esc(r.loTrinh)}</div>` : ''}
-      <div class="small mono">${esc(r.odoDi || '—')} → ${esc(r.odoVe || (r.trangThai === 'Đang dùng' ? 'đang dùng' : '—'))}${r.km !== '' ? ' · ' + esc(r.km) + ' km' : ''}${r.pin !== '' && r.pin != null ? ' · pin ' + esc(r.pin) + '%' : ''}</div>
-      ${r.lech ? `<div class="lech">${esc(r.lech)}</div>` : ''}</div>`;
-  }
-  function moreLog() {
-    const old = document.getElementById('ltLogMore'); if (old) old.remove();
-    const next = LOG.slice(logShown, logShown + 30); logShown += next.length;
-    $('#ltLogList').insertAdjacentHTML('beforeend', next.map(logRow).join(''));
-    if (logShown < LOG.length) {
-      $('#ltLogList').insertAdjacentHTML('beforeend', `<button class="btn block" id="ltLogMore" style="margin-top:8px">Xem thêm · còn ${LOG.length - logShown} lượt</button>`);
-      $('#ltLogMore').onclick = moreLog;
-    }
   }
 
   /* ---------- Bước 1: phiếu ---------- */
@@ -347,7 +330,7 @@
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div id="ltCarTitle" style="font-family:var(--display);font-size:24px;text-transform:uppercase"></div><button class="btn sm" data-close="ltCarDlg">Đóng</button></div>
   <div id="ltCarInfo" style="display:flex;justify-content:space-between;align-items:center;gap:8px"></div>
   <button class="btn cta pri" id="ltCarNew">Lập phiếu lái thử</button>
-  <span class="sect" id="ltLogHead">Nhật trình</span>
+  <span class="sect" id="ltLogHead">Chuyến trước</span>
   <div id="ltLogList"></div>
 </div></div>
 
@@ -404,7 +387,7 @@
     <button class="btn out" id="ltStartBtn" style="min-height:50px;font-weight:800;letter-spacing:.1em">LƯU ODO ĐI</button>
     <button class="btn pri" id="ltReturnBtn" style="min-height:50px;font-weight:800;letter-spacing:.2em;grid-column:2">TRẢ XE</button></div>
   <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
-    <button class="btn sm" id="ltLogBtn">Nhật trình xe</button><button class="btn sm" id="ltReprint">In lại hồ sơ</button><button class="btn sm" id="ltEditBtn">Sửa phiếu</button><button class="btn sm bad" id="ltCancelBtn">Hủy phiếu</button><button class="btn sm" data-close="ltUseDlg">Đóng</button></div>
+    <button class="btn sm" id="ltLogBtn">Chuyến trước</button><button class="btn sm" id="ltReprint">In lại hồ sơ</button><button class="btn sm" id="ltEditBtn">Sửa phiếu</button><button class="btn sm bad" id="ltCancelBtn">Hủy phiếu</button><button class="btn sm" data-close="ltUseDlg">Đóng</button></div>
 </div></div>`;
 
   window.LT = { mount: mount, load: load };
