@@ -25,6 +25,29 @@
   .bar{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
   .bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
   .loginbox{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:18px;padding:0 16px}
+  /* Bảo hiểm */
+  .bh-grid{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+  @media (max-width:980px){.bh-grid{grid-template-columns:1fr}}
+  .q-item{display:flex;flex-direction:column;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:11px 13px;text-align:left;width:100%;cursor:pointer}
+  .q-item.on{border:1.5px solid var(--accent)}
+  .q-item .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .detail{display:flex;flex-direction:column;gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:12px;font-size:13px}
+  .facts>div{padding:10px 12px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+  .facts>div:first-child{border-left:0}
+  .facts input.inp{min-height:34px;font-size:14px;font-weight:700;padding:0 8px;border-radius:8px}
+  @media (max-width:700px){.facts{grid-template-columns:1fr 1fr}.facts>div:nth-child(3){border-left:0}}
+  .dvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+  .dv{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:60px;border-radius:12px;border:1px solid var(--line);background:var(--paper);cursor:pointer}
+  .dv.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .dv b{font-size:15px}.dv span{font-size:12px;opacity:.85}
+  .steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;font-size:11px;text-align:center}
+  .steps i{display:block;height:4px;border-radius:4px;background:var(--line);margin-bottom:6px}
+  .steps .done i{background:var(--accent)} .steps .cur{font-weight:800} .steps div:not(.done){color:var(--muted)}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:800px){.cols2{grid-template-columns:1fr}}
+  .rep{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:800px){.rep{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -54,6 +77,7 @@
     </div>
     <div class="tabs-top" id="tabs">
       <button class="on" data-v="Cavet">Cavet</button>
+      <button data-v="BaoHiem">Bảo hiểm</button>
       <button data-v="NhapXe">Nhập xe</button>
       <button id="btnOut">Thoát</button>
     </div>
@@ -98,6 +122,46 @@
           <span class="hint">Chỉ Giang xem được.</span>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== BẢO HIỂM ===== -->
+  <section id="vBaoHiem" style="display:flex;flex-direction:column;gap:14px" hidden>
+    <div class="kpi">
+      <div><span class="k">Cần xử lý</span><span class="v acc" id="bkMoi">–</span></div>
+      <div><span class="k">Chờ HĐ ký</span><span class="v warn" id="bkHd">–</span></div>
+      <div><span class="k">Quá hạn HĐ</span><span class="v bad" id="bkQh">–</span></div>
+      <div><span class="k">Chưa thu</span><span class="v bad" id="bkThu">–</span></div>
+      <div><span class="k" id="bkThangLbl">Tổng phí tháng</span><span class="v" id="bkTong" style="font-size:20px">–</span></div>
+      <div><span class="k">Khai thác tháng</span><span class="v ok" id="bkKt" style="font-size:20px">–</span></div>
+    </div>
+    <div class="pills" id="repMonth"><button class="pill on" data-m="0">Báo cáo tháng này</button><button class="pill" data-m="-1">Tháng trước</button></div>
+    <div class="rep">
+      <div class="card" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="sect">Báo cáo chị Nga · khai thác</span><button class="btn sm out" id="btnNga">Sao chép tin</button></div>
+        <span class="hint" id="ngaHint"></span>
+        <div class="msg" id="ngaMsg" style="max-height:160px"></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="sect">Báo cáo anh Tâm · tổng</span><button class="btn sm out" id="btnTam">Sao chép · đánh dấu đã báo</button></div>
+        <span class="hint" id="tamHint"></span>
+        <div class="msg" id="tamMsg" style="max-height:220px"></div>
+      </div>
+    </div>
+    <div class="bh-grid">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="pills" id="bqFilter">
+          <button class="pill on" data-f="moi">Cần xử lý</button>
+          <button class="pill" data-f="dang">Đang theo dõi</button>
+          <button class="pill" data-f="hd">Chờ HĐ ký</button>
+          <button class="pill" data-f="thu">Chưa thu</button>
+          <button class="pill" data-f="all">Tất cả</button>
+        </div>
+        <input id="bqFind" class="inp" style="min-height:38px" placeholder="Tìm khách, sale, số khung">
+        <div class="list" id="bqList"><div class="loading"><span class="spin"></span>Đang tải…</div></div>
+        <button class="btn sm" id="btnBcSheet" style="align-self:flex-start">Cập nhật sheet báo cáo tháng</button>
+      </div>
+      <div class="detail" id="bhDetail"><div class="empty">Chọn một hồ sơ bên trái.</div></div>
     </div>
   </section>
 
@@ -172,12 +236,18 @@ $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin');
 
 function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); }
 
+const VIEW = {
+  Cavet: ['Đối chiếu cavet', 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành'],
+  BaoHiem: ['Xử lý bảo hiểm', 'Chọn đơn vị · phân loại · theo dõi từng bước'],
+  NhapXe: ['Nhập xe', 'Từ hóa đơn kế toán · dùng chung Cavet và Bảo hiểm']
+};
 $('#tabs').onclick = e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
+  const v = b.dataset.v;
   $$('#tabs button[data-v]').forEach(x => x.classList.toggle('on', x === b));
-  $('#vCavet').hidden = b.dataset.v !== 'Cavet'; $('#vNhapXe').hidden = b.dataset.v !== 'NhapXe';
-  $('#pgTitle').textContent = b.dataset.v === 'Cavet' ? 'Đối chiếu cavet' : 'Nhập xe';
-  $('#pgSub').textContent = b.dataset.v === 'Cavet' ? 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành' : 'Từ hóa đơn kế toán · dùng chung Cavet và Bảo hiểm';
+  Object.keys(VIEW).forEach(k => $('#v' + k).hidden = k !== v);
+  $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
+  if (v === 'BaoHiem') loadBh();
 };
 
 /* ---------- Cavet ---------- */
@@ -383,6 +453,194 @@ $('#xlsIn').onchange = async e => {
     toast('Đã thêm ' + r.filled + ' SĐT · ' + r.had + ' xe đã có số · ' + r.notFound + ' xe chưa có trong app');
   } catch (err) { toast(String(err), 1); }
 };
+
+/* ================= BẢO HIỂM ================= */
+let BQ = null, bqF = 'moi', bqCur = null;
+const BUOC = ['Mới gửi', 'Đã đăng ký', 'Bàn giao', 'Chờ HĐ ký', 'Thanh toán', 'Hoàn tất'];
+const CHIP = { 'Mới gửi': 'acc', 'Trả về sale': 'bad', 'Đã đăng ký': 'acc', 'Bàn giao': 'acc', 'Chờ HĐ ký': 'warn', 'Thanh toán': 'acc', 'Hoàn tất': 'ok' };
+const LOAI_BH = ['Công ty tặng', 'Đề xuất mua', 'Khách mua', 'Không'];
+const lower1 = s => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
+const amt = s => Number(String(s || '').replace(/[^\d]/g, '')) || 0;
+
+async function loadBh(keepId) {
+  try {
+    BQ = await call('adminBaoHiem', PIN);
+    const r = BQ.records, b = BQ.bao;
+    $('#bkMoi').textContent = r.filter(x => x.buoc === 'Mới gửi').length;
+    $('#bkHd').textContent = r.filter(x => x.buoc === 'Chờ HĐ ký').length;
+    $('#bkQh').textContent = r.filter(x => x.quaHanHd).length;
+    $('#bkThu').textContent = r.filter(x => x.thieuThu).length;
+    $('#bkThangLbl').textContent = 'Tổng phí T' + BQ.thang.slice(0, 2);
+    $('#bkTong').textContent = num(b.tongThang); $('#bkKt').textContent = num(b.khaiThac);
+    renderRep();
+    renderBq();
+    const id = keepId || (bqCur && bqCur.id);
+    const x = id && r.find(y => y.id === id);
+    if (x) openBq(x.id); else if (!bqCur) $('#bhDetail').innerHTML = '<div class="empty">Chọn một hồ sơ bên trái.</div>';
+  } catch (e) {
+    if (/PIN/.test(String(e))) { try { sessionStorage.removeItem('appsale_admin'); } catch (x) {} toast(e, 1); return showLogin(); }
+    $('#bqList').innerHTML = `<div class="empty">${esc(e)}</div>`;
+  }
+}
+let repM = '0';
+function renderRep() {
+  const b = repM === '0' ? BQ.bao : BQ.baoThangTruoc;
+  $$('#repMonth .pill').forEach(p => p.classList.toggle('on', p.dataset.m === repM));
+  $('#repMonth [data-m="-1"]').textContent = 'Tháng trước · T' + BQ.baoThangTruoc.thang.slice(0, 2);
+  $('#repMonth [data-m="0"]').textContent = 'Tháng này · T' + BQ.bao.thang.slice(0, 2);
+  $('#ngaMsg').textContent = b.nga; $('#tamMsg').textContent = b.tam;
+  $('#ngaHint').textContent = 'Thứ 6 hằng tuần · lần tới ' + b.ngaLanToi + ' · ' + b.soHs + ' hồ sơ';
+  $('#tamHint').textContent = b.tamLuc ? 'Lần trước ' + b.tamLuc + ' · ' + b.tamMoi + ' hồ sơ mới từ đó' : 'Chưa báo lần nào';
+}
+$('#repMonth').onclick = e => { const p = e.target.closest('.pill'); if (p) { repM = p.dataset.m; renderRep(); } };
+const bqTest = { moi: x => x.buoc === 'Mới gửi', dang: x => ['Đã đăng ký', 'Bàn giao', 'Thanh toán', 'Trả về sale'].includes(x.buoc), hd: x => x.buoc === 'Chờ HĐ ký', thu: x => x.thieuThu, all: () => true };
+function phu(x) {
+  if (x.buoc === 'Mới gửi') return x.sale + ' · kích hoạt ' + x.kichHoat.slice(0, 5) + (x.dv ? ' · ' + x.dv : ' · chưa chọn đơn vị');
+  if (x.buoc === 'Chờ HĐ ký') return x.sale + ' · ' + x.dv + (x.nh ? ' · ' + x.nh : '') + ' · hạn HĐ ' + x.hanHd.slice(0, 5);
+  if (x.buoc === 'Trả về sale') return x.sale + ' · ' + x.lyDo;
+  return x.sale + ' · ' + (x.dv || '—') + ' · kích hoạt ' + x.kichHoat.slice(0, 5);
+}
+function renderBq() {
+  const q = norm($('#bqFind').value);
+  const lbl = { moi: 'Cần xử lý', dang: 'Đang theo dõi', hd: 'Chờ HĐ ký', thu: 'Chưa thu', all: 'Tất cả' };
+  $$('#bqFilter .pill').forEach(p => { p.textContent = lbl[p.dataset.f] + ' · ' + BQ.records.filter(bqTest[p.dataset.f]).length; p.classList.toggle('on', p.dataset.f === bqF); });
+  let list = BQ.records.filter(bqTest[bqF]);
+  if (q) list = BQ.records.filter(x => norm(x.kh + ' ' + x.sale + ' ' + x.vin).includes(q));
+  $('#bqList').innerHTML = list.length ? list.map(x => `<button class="q-item${bqCur && bqCur.id === x.id ? ' on' : ''}" data-id="${esc(x.id)}">
+      <span class="top"><b style="font-size:14px">${esc(x.kh)}</b><span class="chip ${x.quaHanHd ? 'bad' : (CHIP[x.buoc] || 'mute')}">${esc(x.quaHanHd ? 'Quá hạn HĐ' : x.buoc)}</span></span>
+      <span class="small muted">${esc(phu(x))}</span>
+      ${x.gap && x.buoc === 'Mới gửi' ? '<span class="small b" style="color:var(--warn)">Gấp</span>' : ''}${x.thieuThu ? '<span class="small b" style="color:var(--bad)">Chưa thu tiền khách</span>' : ''}
+    </button>`).join('') : '<div class="empty">Không có hồ sơ.</div>';
+}
+$('#bqFilter').onclick = e => { const b = e.target.closest('.pill'); if (b) { bqF = b.dataset.f; $('#bqFind').value = ''; renderBq(); } };
+$('#bqFind').oninput = () => renderBq();
+$('#bqList').onclick = e => { const b = e.target.closest('.q-item'); if (b) openBq(b.dataset.id); };
+
+/* Việc cần làm theo bước hiện tại (theo quy trình bảo hiểm 5 bước) */
+function tasks(x, f) {
+  const tang = f.vcx === 'Công ty tặng' || f.tnds === 'Công ty tặng';
+  const t = {
+    'Mới gửi': ['Gửi đăng ký cho đơn vị kèm hóa đơn xe'].concat(tang ? ['Xuất hóa đơn BH cho công ty (phần tặng)'] : []).concat(x.nh ? ['Bổ sung điều khoản ngân hàng ' + x.nh] : []),
+    'Đã đăng ký': (x.nh ? ['Gửi ngân hàng: HĐ BH, thẻ chứng nhận, xác nhận thanh toán, hóa đơn BH' + (tang ? ', xác nhận tặng' : '')] : ['Gửi khách: HĐ BH, thẻ chứng nhận, hóa đơn BH'])
+      .concat(tang ? ['Gửi kế toán: hóa đơn xe, tên khách + số tiền tặng, hóa đơn BH'] : []),
+    'Bàn giao': [(x.nh ? 'Nhắc ngân hàng gửi lại HĐ ký 3 bên' : 'Nhắc khách ký và gửi lại HĐ') + (x.hanHd ? ' (hạn ' + x.hanHd.slice(0, 5) + ')' : '')],
+    'Chờ HĐ ký': ['Đã nhận lại HĐ có đủ chữ ký'],
+    'Thanh toán': ['Thanh toán phí cho đơn vị'].concat(tang ? ['Bộ hồ sơ thanh toán phần tặng (đề nghị TT, đề xuất, HĐ xe, tỷ lệ phí, GCN, HĐ BH)'] : [])
+  };
+  return t[x.buoc] || [];
+}
+function emailText(x, f) {
+  const v = f.vcx === 'Không' ? 0 : amt(f.vcxTien), t = f.tnds === 'Không' ? 0 : amt(f.tndsTien);
+  const L = ['Đăng ký bảo hiểm: ' + x.kh + ' · ' + x.xe + ' · ' + x.vin, 'Hiệu lực từ: ' + x.kichHoat + ' · ' + x.mucDich];
+  if (v) L.push('Phí VCX (gồm VAT): ' + num(v) + ' đ · ' + lower1(f.vcx));
+  if (t) L.push('Phí TNDS (gồm VAT): ' + num(t) + ' đ · ' + lower1(f.tnds));
+  L.push('Tổng phí: ' + num(v + t) + ' đ');
+  if (x.nh) L.push('Khách vay ' + x.nh + (x.nhNguoi ? ' (' + x.nhNguoi + ')' : '') + ': vui lòng bổ sung điều khoản ngân hàng thụ hưởng.');
+  if (f.vcx === 'Công ty tặng' || f.tnds === 'Công ty tặng') {
+    const h = BQ.tangHd;
+    L.push('Hóa đơn phần tặng xuất cho: ' + h.ten, 'Địa chỉ: ' + h.diaChi, 'MST: ' + h.mst, 'Email nhận hóa đơn: ' + h.email);
+  }
+  return L.join('\n');
+}
+const driveUrl = id => 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
+
+function openBq(id) {
+  const x = BQ.records.find(r => r.id === id); if (!x) return;
+  bqCur = { id: x.id, dv: x.dv, vcx: x.vcx, tnds: x.tnds, vcxTien: x.vcxTien, tndsTien: x.tndsTien, vcxThu: x.vcxThu, tndsThu: x.tndsThu, viec: x.viec.slice(), ghiChu: x.ghiChu };
+  $$('#bqList .q-item').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+  drawBq(x);
+}
+function drawBq(x) {
+  const f = bqCur, i = BUOC.indexOf(x.buoc), moi = x.buoc === 'Mới gửi', xong = x.buoc === 'Hoàn tất', tra = x.buoc === 'Trả về sale';
+  const pills = (k, label) => `<div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">Phân loại ${label} · sửa nếu sale chọn sai</span>
+    <div class="pills" data-k="${k}" style="display:grid;grid-template-columns:repeat(2,1fr)">${LOAI_BH.map(l => `<button class="pill${f[k] === l ? ' on' : ''}" data-v="${l}">${l}</button>`).join('')}</div>
+    <span class="hint">Sale chọn: ${esc(k === 'vcx' ? x.vcxSale : x.tndsSale)}</span></div>`;
+  const khachTra = k => ['Đề xuất mua', 'Khách mua'].includes(f[k]) && amt(f[k + 'Tien']);
+  const tk = tasks(x, f);
+  $('#bhDetail').innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+        <div style="font-family:var(--display);font-size:28px;text-transform:uppercase;line-height:1.1">${esc(x.kh)}</div>
+        <div class="small muted">${esc([x.xe, x.mau].filter(Boolean).join(' · '))} · <span class="mono">${esc(x.vin)}</span> · Sale ${esc(x.sale)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="chip ${x.gap ? 'warn' : 'acc'}">${x.gap ? 'Gấp · ' : ''}kích hoạt ${esc(x.kichHoat.slice(0, 5))}</span>
+        <span class="small muted">Gửi lúc ${esc(x.guiLuc)}${x.thangBc ? ' · báo cáo T' + esc(x.thangBc.slice(0, 2)) : ''}</span>
+      </div>
+    </div>
+    ${tra ? `<div class="chip bad" style="align-self:flex-start">Đã trả về sale: ${esc(x.lyDo)}</div>` : ''}
+    <div class="facts">
+      <div><span class="lbl">VCX · ${esc(f.vcx)}</span><input class="inp mono" id="fV" value="${f.vcxTien ? num(f.vcxTien) : ''}" ${f.vcx === 'Không' || xong ? 'disabled' : ''}></div>
+      <div><span class="lbl">TNDS · ${esc(f.tnds)}</span><input class="inp mono" id="fT" value="${f.tndsTien ? num(f.tndsTien) : ''}" ${f.tnds === 'Không' || xong ? 'disabled' : ''}></div>
+      <div><span class="lbl">Mục đích · vay</span><b>${esc(x.mucDich === 'Kinh doanh' ? 'Kinh doanh' : x.mucDich ? 'Không KD' : '—')}</b><span>${esc(x.nh ? x.nh + (x.nhNguoi ? ' · ' + x.nhNguoi : '') : 'Không vay')}</span></div>
+      <div><span class="lbl">Hồ sơ</span>${x.deXuat ? `<a href="${driveUrl(x.deXuat)}" target="_blank" rel="noopener" class="b">Đề xuất bán hàng</a>` : '<span class="muted">Chưa có đề xuất</span>'}${x.fileHd ? `<a href="${driveUrl(x.fileHd)}" target="_blank" rel="noopener" class="b">Hóa đơn xe</a>` : '<span class="muted">Chưa có hóa đơn PDF</span>'}</div>
+    </div>
+    ${x.ghiSale ? `<div class="small"><b>Sale ghi:</b> ${esc(x.ghiSale)}</div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Đơn vị bảo hiểm <span class="req">*</span> · tỷ trọng T${esc(BQ.thang.slice(0, 2))}</span>
+      <div class="dvs" id="fDv">${BQ.share.map(s => `<button class="dv${f.dv === s.dv ? ' on' : ''}" data-v="${esc(s.dv)}" ${xong ? 'disabled' : ''}><b>${esc(s.dv)}</b><span>${String(s.pct).replace('.', ',')}%</span></button>`).join('')}</div></div>
+    <div class="cols2">${pills('vcx', 'VCX')}${pills('tnds', 'TNDS')}</div>
+    <div class="steps">${BUOC.map((b, j) => `<div class="${j <= i ? 'done' : ''}${j === i ? ' cur' : ''}"><i></i>${b}</div>`).join('')}</div>
+    <div class="cols2">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span class="lbl" style="padding-bottom:4px">${xong ? 'Đã hoàn tất' : 'Bước ' + esc(x.buoc) + ' · cần làm'}</span>
+        ${tk.map(t => `<label class="check" style="min-height:34px;font-size:13px"><input type="checkbox" data-viec="${esc(t)}"${f.viec.includes(t) ? ' checked' : ''}>${esc(t)}</label>`).join('')}
+        ${khachTra('vcx') ? `<label class="check" style="min-height:34px;font-size:13px"><input type="checkbox" id="fVThu"${f.vcxThu ? ' checked' : ''}>Đã thu tiền khách phần VCX (${num(amt(f.vcxTien))} đ)</label>` : ''}
+        ${khachTra('tnds') ? `<label class="check" style="min-height:34px;font-size:13px"><input type="checkbox" id="fTThu"${f.tndsThu ? ' checked' : ''}>Đã thu tiền khách phần TNDS (${num(amt(f.tndsTien))} đ)</label>` : ''}
+        <label class="field" style="margin-top:6px"><span class="lbl">Ghi chú</span><input class="inp" id="fGhi" value="${esc(f.ghiChu)}" maxlength="500"></label>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Email đăng ký soạn sẵn</span><button class="btn sm out" id="fMail">Sao chép</button></div>
+        <div class="small" id="fMailTxt" style="white-space:pre-line;line-height:1.5">${esc(emailText(x, f))}</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap">
+      ${moi ? `<span class="small muted" style="margin-right:auto">Xử lý hôm nay → tính vào <b style="color:var(--accent)">báo cáo T${esc(BQ.thang.slice(0, 2))}</b></span>` : '<span style="margin-right:auto"></span>'}
+      ${moi ? '<button class="btn" id="fBack">Trả về sale</button>' : ''}
+      ${!tra ? '<button class="btn" id="fSave">Lưu</button>' : ''}
+      ${!tra && !xong ? `<button class="btn pri" id="fNext" style="letter-spacing:.12em;font-weight:800">LƯU · CHUYỂN ${esc(BUOC[i + 1].toUpperCase())}</button>` : ''}
+    </div>`;
+}
+/* Ghi nhận thay đổi trên form vào bqCur (chưa lưu) */
+$('#bhDetail').addEventListener('click', e => {
+  if (!bqCur) return;
+  const x = BQ.records.find(r => r.id === bqCur.id);
+  const dv = e.target.closest('.dv'); if (dv && !dv.disabled) { pull(); bqCur.dv = dv.dataset.v; return drawBq(x); }
+  const p = e.target.closest('.pills .pill'); if (p) { pull(); bqCur[p.parentElement.dataset.k] = p.dataset.v; return drawBq(x); }
+  if (e.target.id === 'fMail') return copyText($('#fMailTxt').textContent);
+  if (e.target.id === 'fSave') return saveBq(false, e.target);
+  if (e.target.id === 'fNext') return saveBq(true, e.target);
+  if (e.target.id === 'fBack') {
+    const ly = prompt('Lý do trả về sale (sale sẽ thấy):', 'Thiếu đề xuất bán hàng'); if (!ly) return;
+    return busy(e.target, '', async () => { try { await call('adminBhReturn', PIN, bqCur.id, ly); toast('Đã trả về sale'); await loadBh(bqCur.id); } catch (err) { toast(err, 1); } });
+  }
+});
+$('#bhDetail').addEventListener('input', e => { if (e.target.id === 'fV' || e.target.id === 'fT') { pull(); $('#fMailTxt').textContent = emailText(BQ.records.find(r => r.id === bqCur.id), bqCur); } });
+function pull() {
+  if (!$('#fV')) return;
+  bqCur.vcxTien = amt($('#fV').value); bqCur.tndsTien = amt($('#fT').value);
+  bqCur.viec = $$('#bhDetail [data-viec]').filter(c => c.checked).map(c => c.dataset.viec).concat(bqCur.viec.filter(v => !$$('#bhDetail [data-viec]').some(c => c.dataset.viec === v)));
+  if ($('#fVThu')) bqCur.vcxThu = $('#fVThu').checked;
+  if ($('#fTThu')) bqCur.tndsThu = $('#fTThu').checked;
+  bqCur.ghiChu = $('#fGhi').value;
+}
+function saveBq(tiep, btn) {
+  pull();
+  const f = bqCur, x = BQ.records.find(r => r.id === f.id);
+  if (tiep && x.buoc === 'Mới gửi' && !f.dv) return toast('Vui lòng chọn đơn vị bảo hiểm.', 1);
+  const p = { dv: f.dv, vcx: f.vcx, tnds: f.tnds, vcxTien: f.vcxTien, tndsTien: f.tndsTien, vcxThu: f.vcxThu, tndsThu: f.tndsThu, viec: f.viec, ghiChu: f.ghiChu };
+  busy(btn, 'Đang lưu', async () => {
+    try { const r = await call('adminBhSave', PIN, f.id, p, tiep); toast(tiep ? 'Đã chuyển: ' + r.buoc : 'Đã lưu'); await loadBh(f.id); }
+    catch (err) { toast(err, 1); }
+  });
+}
+$('#btnNga').onclick = () => copyText($('#ngaMsg').textContent);
+$('#btnTam').onclick = () => busy($('#btnTam'), '', async () => {
+  await copyText($('#tamMsg').textContent);
+  try { await call('adminBhMarkTam', PIN); await loadBh(); } catch (e) { toast(e, 1); }
+});
+$('#btnBcSheet').onclick = () => busy($('#btnBcSheet'), 'Đang cập nhật', async () => {
+  try { await call('adminRefresh', PIN); toast('Đã cập nhật sheet BC_BaoHiem và BC_Cavet'); } catch (e) { toast(e, 1); }
+});
 
 if (PIN) start(); else showLogin();
 </script>

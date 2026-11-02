@@ -24,6 +24,23 @@
   .toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
   .toggle input{width:24px;height:24px;accent-color:var(--accent);flex-shrink:0;margin:0}
   .thumb{max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line);display:block}
+  /* Bảo hiểm */
+  .bh-card{display:flex;flex-direction:column;gap:5px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-align:left;width:100%;cursor:pointer}
+  .bh-card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .bh-card .t{font-weight:700;font-size:14px}
+  .bh-card .s{font-size:12px;color:var(--muted)}
+  .bh-card .nhac{font-size:12px;font-weight:600;color:var(--warn)}
+  .bh-card .nhac.bad{color:var(--bad)}
+  .car-opt{display:flex;flex-direction:column;gap:2px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:left;width:100%;cursor:pointer}
+  .car-opt.sel{background:var(--accent-soft);border-color:var(--accent)}
+  .car-opt[disabled]{opacity:.55;cursor:default}
+  .part{display:flex;flex-direction:column;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .part .row1{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .part .inp{max-width:160px;text-align:right;min-height:40px}
+  .pills.g4{display:grid;grid-template-columns:repeat(2,1fr)}
+  .pills.g4 .pill{padding:0 8px}
+  .gap-line{font-size:12px;font-weight:700;color:var(--warn)}
+  mark{background:#fff3b0;color:inherit;border-radius:3px}
 </style>
 </head>
 <body>
@@ -74,13 +91,19 @@
     </div>
   </section>
 
-  <section id="tabBaoHiem" hidden><div class="soon-box"><div class="title">Bảo hiểm</div><p>Tab đang hoàn thiện, sẽ mở sau tab Cavet.</p></div></section>
+  <section id="tabBaoHiem" hidden>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="btn cta pri" id="bhNew">Kích hoạt mới</button>
+      <span class="sect">Hồ sơ của tôi</span>
+      <div class="list" id="bhList"><div class="loading"><span class="spin"></span>Đang tải…</div></div>
+    </div>
+  </section>
   <section id="tabLaiThu" hidden><div class="soon-box"><div class="title">Xe lái thử</div><p>Tab đang hoàn thiện, sẽ mở sau tab Bảo hiểm.</p></div></section>
 </main>
 
 <nav class="tabbar" id="tabbar" hidden>
   <button class="on" data-tab="Cavet">Cavet</button>
-  <button data-tab="BaoHiem">Bảo hiểm<span class="soon">SẮP CÓ</span></button>
+  <button data-tab="BaoHiem">Bảo hiểm</button>
   <button data-tab="LaiThu">Lái thử<span class="soon">SẮP CÓ</span></button>
 </nav>
 
@@ -116,6 +139,68 @@
       <button class="btn block" id="dClose" type="button">Đóng</button>
       <button class="btn cta pri" id="dSave" type="button">Lưu</button>
     </div>
+  </div>
+</div>
+
+<!-- KÍCH HOẠT BẢO HIỂM -->
+<div class="sheet-bg" id="bhDlg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="bhTitle">
+    <div class="grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div id="bhTitle" style="font-family:var(--display);font-size:26px;text-transform:uppercase;line-height:1.1">Kích hoạt bảo hiểm</div>
+      <button class="btn sm" id="bhClose" type="button">Đóng</button>
+    </div>
+    <div id="bhLyDo" class="warn-line" hidden></div>
+
+    <div class="field">
+      <span class="lbl">Tìm xe · tên khách hoặc số khung <span class="req">*</span></span>
+      <input id="bhFind" class="inp" type="search" placeholder="VD: Trúc Linh hoặc 3962" autocomplete="off">
+      <span class="hint">Gõ không dấu cũng được · chỉ hiện xe của bạn</span>
+      <div class="list" id="bhCars"></div>
+    </div>
+
+    <label class="field"><span class="lbl">Ngày kích hoạt <span class="req">*</span></span>
+      <input id="bhNgay" class="inp mono" type="date"></label>
+    <div id="bhGap" class="gap-line" hidden></div>
+
+    <div class="field"><span class="lbl">Mục đích sử dụng <span class="req">*</span></span>
+      <div class="pills" id="bhMd" style="display:grid;grid-template-columns:1fr 1fr">
+        <button class="pill" type="button" data-v="Không kinh doanh">Không kinh doanh</button>
+        <button class="pill" type="button" data-v="Kinh doanh">Kinh doanh</button>
+      </div></div>
+
+    <div class="part" data-part="vcx">
+      <div class="row1"><b>Vật chất (VCX)</b><input class="inp mono" inputmode="numeric" placeholder="Số tiền" aria-label="Số tiền VCX"></div>
+      <div class="pills g4">
+        <button class="pill" type="button" data-v="Công ty tặng">Công ty tặng</button><button class="pill" type="button" data-v="Đề xuất mua">Đề xuất mua</button>
+        <button class="pill" type="button" data-v="Khách mua">Khách mua</button><button class="pill" type="button" data-v="Không">Không</button>
+      </div>
+    </div>
+    <div class="part" data-part="tnds">
+      <div class="row1"><b>Dân sự (TNDS)</b><input class="inp mono" inputmode="numeric" placeholder="Số tiền" aria-label="Số tiền TNDS"></div>
+      <div class="pills g4">
+        <button class="pill" type="button" data-v="Công ty tặng">Công ty tặng</button><button class="pill" type="button" data-v="Đề xuất mua">Đề xuất mua</button>
+        <button class="pill" type="button" data-v="Khách mua">Khách mua</button><button class="pill" type="button" data-v="Không">Không</button>
+      </div>
+    </div>
+    <div class="hint" id="bhTong"></div>
+
+    <div class="field"><span class="lbl">Vay ngân hàng</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <select id="bhNh" class="inp" aria-label="Ngân hàng"><option>Không vay</option></select>
+        <input id="bhNhNguoi" class="inp" placeholder="Người phụ trách" aria-label="Người phụ trách ngân hàng" disabled>
+      </div></div>
+
+    <div class="field"><span class="lbl">Đề xuất bán hàng · không bắt buộc</span>
+      <button class="btn block" id="bhDxBtn" type="button">Chụp ảnh hoặc chọn PDF</button>
+      <input id="bhDxFile" type="file" accept="image/*,application/pdf" hidden>
+      <span class="hint" id="bhDxName"></span>
+    </div>
+
+    <label class="field"><span class="lbl">Ghi chú</span>
+      <input id="bhGhi" class="inp" placeholder="Không bắt buộc" maxlength="300"></label>
+
+    <button class="btn cta pri" id="bhSend" type="button">Gửi kích hoạt</button>
   </div>
 </div>
 
@@ -164,12 +249,15 @@ function startApp() {
   loadCavet();
 }
 
+let tab = 'Cavet';
 $$('#tabbar button').forEach(b => b.onclick = () => {
-  const t = b.dataset.tab;
+  tab = b.dataset.tab;
   $$('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
-  ['Cavet', 'BaoHiem', 'LaiThu'].forEach(k => $('#tab' + k).hidden = k !== t);
-  $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm', LaiThu: 'Xe lái thử' }[t];
-  $('#pgSub').textContent = t === 'Cavet' ? 'Hạn 20 ngày từ ngày hóa đơn' : 'Sắp có';
+  ['Cavet', 'BaoHiem', 'LaiThu'].forEach(k => $('#tab' + k).hidden = k !== tab);
+  $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm', LaiThu: 'Xe lái thử' }[tab];
+  $('#pgSub').textContent = { Cavet: 'Hạn 20 ngày từ ngày hóa đơn', BaoHiem: 'Kích hoạt · báo trước 3 ngày làm việc', LaiThu: 'Sắp có' }[tab];
+  if (tab === 'BaoHiem' && !BH) loadBh();
+  window.scrollTo(0, 0);
 });
 
 async function loadCavet() {
@@ -255,10 +343,177 @@ $('#dSave').onclick = () => busy($('#dSave'), 'Đang lưu', async () => {
   } catch (e) { toast(e, 1); }
 });
 
+/* ================= BẢO HIỂM ================= */
+let BH = null, bhSel = null, bhEdit = null, bhDx = null;
+const BH_CHIP = { 'Mới gửi': 'acc', 'Trả về sale': 'bad', 'Đã đăng ký': 'acc', 'Bàn giao': 'acc', 'Chờ HĐ ký': 'warn', 'Thanh toán': 'acc', 'Hoàn tất': 'ok' };
+const lower1 = s => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
+
+async function loadBh() {
+  $('#bhList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
+  try {
+    BH = await call('bhInit', auth);
+    lastLoad = Date.now();
+    $('#bhNh').innerHTML = '<option>Không vay</option>' + BH.banks.map(b => `<option>${esc(b)}</option>`).join('');
+    $('#pgSub').textContent = 'Kích hoạt · báo trước ' + BH.baoTruoc + ' ngày làm việc';
+    renderBh();
+  } catch (e) {
+    if (/PIN/.test(String(e))) { store.del(KEY); auth = null; toast(e, 1); return showLogin(); }
+    $('#bhList').innerHTML = `<div class="empty">${esc(e)}<br><button class="btn sm out" style="margin-top:10px" onclick="loadBh()">Thử lại</button></div>`;
+  }
+}
+
+function goi(x) {
+  const p = [];
+  if (x.vcx !== 'Không') p.push('VCX ' + lower1(x.vcx));
+  if (x.tnds !== 'Không') p.push('TNDS ' + lower1(x.tnds));
+  if (x.nh) p.push(x.nh);
+  return p.join(' · ');
+}
+function nhac(x) {
+  if (x.buoc === 'Trả về sale') return ['bad', 'Giang trả về: ' + x.lyDo + '. Bấm để sửa và gửi lại.'];
+  if (x.buoc === 'Chờ HĐ ký') return [x.quaHanHd ? 'bad' : '', (x.nh ? 'Ngân hàng gửi lại hợp đồng ký 3 bên' : 'Gửi lại hợp đồng có đủ chữ ký') + ' trước ' + x.hanHd.slice(0, 5) + (x.quaHanHd ? ' · đã quá hạn' : '')];
+  if (x.buoc === 'Mới gửi' && x.gap) return ['', 'Báo gấp · Giang đang xử lý'];
+  return null;
+}
+function renderBh() {
+  const rs = BH.records;
+  if (!rs.length) { $('#bhList').innerHTML = '<div class="empty">Chưa có hồ sơ. Bấm “Kích hoạt mới” để gửi.</div>'; return; }
+  $('#bhList').innerHTML = rs.map(x => {
+    const n = nhac(x);
+    return `<button class="bh-card" data-id="${esc(x.id)}">
+      <span class="top"><span class="t">${esc(x.kh)}</span><span class="chip ${BH_CHIP[x.buoc] || 'mute'}">${esc(x.buoc)}</span></span>
+      <span class="s">${esc(x.xe)} · kích hoạt <span class="mono">${esc(x.kichHoat.slice(0, 5))}</span></span>
+      <span class="top"><span class="s">${esc(goi(x))}</span><span class="mono b small" style="white-space:nowrap">${money(x.tong)}</span></span>
+      ${n ? `<span class="nhac ${n[0]}">${esc(n[1])}</span>` : ''}
+    </button>`;
+  }).join('');
+}
+$('#bhList').onclick = e => {
+  const b = e.target.closest('.bh-card'); if (!b) return;
+  const x = BH.records.find(r => r.id === b.dataset.id);
+  if (x && (x.buoc === 'Trả về sale' || x.buoc === 'Mới gửi')) openBh(x);
+  else if (x) toast('Hồ sơ đang ở bước ' + x.buoc + '. Cần sửa vui lòng liên hệ Giang.');
+};
+
+/* ----- Form ----- */
+const setPill = (box, v) => $$('.pill', box).forEach(p => p.classList.toggle('on', p.dataset.v === v));
+const getPill = box => { const p = $('.pill.on', box); return p ? p.dataset.v : ''; };
+const toISO = s => { const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? m[3] + '-' + m[2] + '-' + m[1] : ''; };
+const fromISO = s => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+const amt = s => Number(String(s || '').replace(/[^\d]/g, '')) || 0;
+
+function openBh(rec) {
+  if (!BH) return;
+  bhEdit = rec || null; bhDx = null;
+  $('#bhTitle').textContent = rec ? 'Sửa và gửi lại' : 'Kích hoạt bảo hiểm';
+  $('#bhLyDo').hidden = !(rec && rec.lyDo); $('#bhLyDo').textContent = rec && rec.lyDo ? 'Giang trả về: ' + rec.lyDo : '';
+  $('#bhFind').value = ''; bhSel = rec ? BH.cars.find(c => c.vin === rec.vin) || { vin: rec.vin, kh: rec.kh, xe: rec.xe, mau: rec.mau, hd: rec.hd } : null;
+  $('#bhFind').disabled = !!rec;
+  $('#bhNgay').value = rec ? toISO(rec.kichHoat) : '';
+  setPill($('#bhMd'), rec ? rec.mucDich : '');
+  const vp = $('[data-part=vcx]'), tp = $('[data-part=tnds]');
+  setPill(vp, rec ? rec.vcxSale : ''); setPill(tp, rec ? rec.tndsSale : '');
+  $('input', vp).value = rec && rec.vcxTien ? num(rec.vcxTien) : ''; $('input', tp).value = rec && rec.tndsTien ? num(rec.tndsTien) : '';
+  $('#bhNh').value = rec && rec.nh ? rec.nh : 'Không vay'; $('#bhNhNguoi').value = rec ? rec.nhNguoi : '';
+  $('#bhGhi').value = rec ? rec.ghiSale : '';
+  $('#bhDxName').textContent = rec && rec.deXuat ? 'Đã có đề xuất. Chọn lại nếu cần thay.' : '';
+  syncBh(); renderCars();
+  $('#bhDlg').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeBh() { $('#bhDlg').hidden = true; document.body.style.overflow = ''; }
+$('#bhNew').onclick = () => openBh(null);
+$('#bhClose').onclick = closeBh;
+$('#bhDlg').onclick = e => { if (e.target.id === 'bhDlg') closeBh(); };
+
+function hl(text, q) {
+  const t = String(text || ''); if (!q) return esc(t);
+  const n = norm(t), i = n.indexOf(q);
+  return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length));
+}
+function renderCars() {
+  const q = norm($('#bhFind').value);
+  if (bhSel && !q) {
+    $('#bhCars').innerHTML = `<div class="car-opt sel"><b>${esc(bhSel.kh)}</b><span class="mono small">${esc(bhSel.vin)}</span><span class="small muted">${esc([bhSel.xe, bhSel.mau, bhSel.hd ? 'HĐ ' + bhSel.hd : ''].filter(Boolean).join(' · '))}</span></div>`;
+    return;
+  }
+  if (!q) { $('#bhCars').innerHTML = ''; return; }
+  const hit = BH.cars.filter(c => norm(c.kh).includes(q) || c.vin.toLowerCase().includes(q)).slice(0, 6);
+  $('#bhCars').innerHTML = hit.length ? hit.map(c => `<button type="button" class="car-opt" data-vin="${esc(c.vin)}"${c.coBh ? ' disabled' : ''}>
+      <b>${hl(c.kh, q)}</b><span class="mono small">${hl(c.vin, q)}</span>
+      <span class="small muted">${esc([c.xe, c.mau, 'HĐ ' + c.hd].filter(Boolean).join(' · '))}${c.coBh ? ' · <b style="color:var(--warn)">Đã có hồ sơ bảo hiểm</b>' : ''}</span></button>`).join('')
+    : '<div class="hint">Không thấy xe. Xe chưa được nhập vào app thì vui lòng báo Giang.</div>';
+}
+$('#bhFind').oninput = () => { bhSel = null; renderCars(); };
+$('#bhCars').onclick = e => {
+  const b = e.target.closest('.car-opt[data-vin]'); if (!b || b.disabled) return;
+  bhSel = BH.cars.find(c => c.vin === b.dataset.vin); $('#bhFind').value = ''; renderCars();
+};
+
+/* Ngày làm việc (CN nghỉ, T7 nghỉ). Ngày lễ do máy chủ kiểm tra lại. */
+function workDays(toISOstr) {
+  const t = new Date(toISOstr + 'T00:00:00'); const d = new Date(); d.setHours(0, 0, 0, 0);
+  let n = 0;
+  for (const x = new Date(d); x < t;) { x.setDate(x.getDate() + 1); const w = x.getDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+function syncBh() {
+  ['vcx', 'tnds'].forEach(k => {
+    const box = $('[data-part=' + k + ']'), inp = $('input', box);
+    inp.disabled = getPill(box) === 'Không'; if (inp.disabled) inp.value = '';
+  });
+  const v = $('#bhNgay').value;
+  const n = v ? workDays(v) : null;
+  $('#bhGap').hidden = !(v && n < BH.baoTruoc);
+  if (v && n < BH.baoTruoc) $('#bhGap').textContent = 'Báo gấp · trước ' + n + ' ngày làm việc (quy định ' + BH.baoTruoc + ' ngày)';
+  const tong = amt($('[data-part=vcx] input').value) + amt($('[data-part=tnds] input').value);
+  $('#bhTong').textContent = tong ? 'Tổng phí: ' + money(tong) : '';
+  $('#bhNhNguoi').disabled = $('#bhNh').value === 'Không vay';
+  if ($('#bhNhNguoi').disabled) $('#bhNhNguoi').value = '';
+}
+['#bhMd', '[data-part=vcx]', '[data-part=tnds]'].forEach(sel => $(sel).addEventListener('click', e => {
+  const p = e.target.closest('.pill'); if (!p) return;
+  setPill(p.parentElement, p.dataset.v); syncBh();
+}));
+$$('.part input').forEach(i => {
+  i.addEventListener('input', syncBh);
+  i.addEventListener('blur', () => { const n = amt(i.value); i.value = n ? num(n) : ''; });
+});
+$('#bhNgay').onchange = syncBh; $('#bhNh').onchange = syncBh;
+
+$('#bhDxBtn').onclick = () => $('#bhDxFile').click();
+$('#bhDxFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    if (/pdf/i.test(f.type)) {
+      if (f.size > 8 * 1024 * 1024) return toast('File PDF quá lớn (tối đa 8 MB).', 1);
+      bhDx = { b64: await fileToBase64(f), type: 'application/pdf' };
+    } else bhDx = { b64: await shrinkImage(f, 2000, 0.85), type: 'image/jpeg' };
+    $('#bhDxName').textContent = 'Đã chọn: ' + f.name;
+  } catch (err) { toast(err, 1); }
+};
+
+$('#bhSend').onclick = () => {
+  if (!bhSel) return toast('Vui lòng chọn xe.', 1);
+  const ngay = fromISO($('#bhNgay').value);
+  if (!ngay) return toast('Vui lòng chọn ngày kích hoạt.', 1);
+  const md = getPill($('#bhMd')); if (!md) return toast('Vui lòng chọn mục đích sử dụng.', 1);
+  const vcx = getPill($('[data-part=vcx]')), tnds = getPill($('[data-part=tnds]'));
+  if (!vcx || !tnds) return toast('Vui lòng chọn VCX và TNDS (chọn “Không” nếu không có).', 1);
+  const d = { vin: bhSel.vin, ngay, mucDich: md, vcx, tnds, vcxTien: $('[data-part=vcx] input').value, tndsTien: $('[data-part=tnds] input').value,
+    nh: $('#bhNh').value, nhNguoi: $('#bhNhNguoi').value, ghiChu: $('#bhGhi').value, deXuat: bhDx };
+  busy($('#bhSend'), 'Đang gửi', async () => {
+    try {
+      await call('bhSubmit', auth, d, bhEdit ? bhEdit.id : null);
+      closeBh(); toast('Đã gửi. Cảm ơn anh/chị.'); loadBh();
+    } catch (e) { toast(e, 1); }
+  });
+};
+
 /* Mở lại app sau hơn 1 phút → tự tải danh sách mới */
 let lastLoad = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && auth && !$('#vApp').hidden && $('#dlg').hidden && Date.now() - lastLoad > 60000) loadCavet();
+  if (document.visibilityState !== 'visible' || !auth || $('#vApp').hidden || !$('#dlg').hidden || !$('#bhDlg').hidden || Date.now() - lastLoad < 60000) return;
+  if (tab === 'BaoHiem') loadBh(); else loadCavet();
 });
 
 /* ---------- Khởi động ---------- */
