@@ -95,7 +95,7 @@
     <div class="tabs-top" id="tabs">
       <button class="on" data-v="Cavet">Cavet</button>
       <button data-v="BaoHiem">Bảo hiểm</button>
-      <button data-v="LaiThu">Lái thử</button>
+      <a class="btn" href="https://xedemo.vinfastsamcobinhtan.com/quanly" target="_blank" rel="noopener" style="min-height:42px;border-radius:999px">Xe demo ↗</a>
       <button data-v="NhapXe">Nhập xe</button>
       <button id="btnOut">Thoát</button>
     </div>
@@ -371,7 +371,6 @@ $('#tabs').onclick = e => {
   Object.keys(VIEW).forEach(k => $('#v' + k).hidden = k !== v);
   $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
   if (v === 'BaoHiem') loadBh();
-  if (v === 'LaiThu') loadLt();
 };
 
 /* ---------- Cavet ---------- */
