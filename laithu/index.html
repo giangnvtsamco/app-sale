@@ -1,53 +1,9 @@
 <!doctype html>
-<html lang="vi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f4e8c">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Xe lái thử">
-<title>Xe lái thử · SAMCO</title>
-<link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../icon-180.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/style.css">
-</head>
-<body>
-<main class="wrap" style="padding-bottom:calc(32px + env(safe-area-inset-bottom))">
-  <div class="hd-l">
-    <div class="brand">SAMCO</div>
-    <div class="title">Xe lái thử</div>
-    <div class="sub">Đăng ký sử dụng xe demo</div>
-    <div class="chrome"></div>
-  </div>
-  <label class="field"><span class="lbl">Người sử dụng <span class="req">*</span></span>
-    <select id="who" class="inp"><option value="">Đang tải…</option></select>
-    <span class="hint">Máy sẽ nhớ tên cho lần sau.</span></label>
-  <div id="ltRoot"></div>
-</main>
-<script src="../config.js"></script>
-<script src="https://giangnvtsamco.github.io/samco-core/api.js"></script>
-<script src="https://giangnvtsamco.github.io/samco-core/ui.js"></script>
-<script src="../lt.js?v=1.2.6"></script>
-<script>
-let ten = store.get('laithu_ten') || '';
-const auth = () => ({ ten });
-LT.mount($('#ltRoot'), { auth, base: '../', onAuthFail: e => { toast('Vui lòng chọn đúng tên người sử dụng.', 1); store.del('laithu_ten'); ten = ''; $('#who').value = ''; $('#ltRoot').hidden = true; } });
-(async () => {
-  try {
-    const ds = await call('ltStaff');
-    const nhom = {}; ds.forEach(s => (nhom[s.boPhan || 'Khác'] = nhom[s.boPhan || 'Khác'] || []).push(s));
-    $('#who').innerHTML = '<option value="">— Chọn tên —</option>' + Object.keys(nhom).map(b => `<optgroup label="${esc(b)}">` +
-      nhom[b].map(s => `<option value="${esc(s.ten)}"${s.ten === ten ? ' selected' : ''}>${esc(s.ten)}</option>`).join('') + '</optgroup>').join('');
-    if (!ds.some(s => s.ten === ten)) ten = '';
-    $('#ltRoot').hidden = !ten; if (ten) LT.load();
-  } catch (e) { $('#who').innerHTML = '<option value="">Không tải được</option>'; toast(e, 1); }
-})();
-$('#who').onchange = () => { ten = $('#who').value; store.set('laithu_ten', ten); $('#ltRoot').hidden = !ten; if (ten) LT.load(); };
-let last = Date.now();
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && ten && Date.now() - last > 60000 && !document.querySelector('.sheet-bg:not([hidden])')) { last = Date.now(); LT.load(); }
-});
-</script>
-</body>
-</html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xe Demo · SAMCO</title>
+<meta http-equiv="refresh" content="0; url=https://xedemo.vinfastsamcobinhtan.com">
+<script>location.replace('https://xedemo.vinfastsamcobinhtan.com');</script>
+</head><body style="font-family:system-ui,sans-serif;padding:24px">
+Trang xe lái thử đã chuyển sang <a href="https://xedemo.vinfastsamcobinhtan.com">xedemo.vinfastsamcobinhtan.com</a>.
+</body></html>
