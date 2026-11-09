@@ -147,9 +147,9 @@
   <section id="vBaoHiem" style="display:flex;flex-direction:column;gap:14px" hidden>
     <div class="kpi">
       <div><span class="k">Cần xử lý</span><span class="v acc" id="bkMoi">–</span></div>
-      <div><span class="k">Chờ HĐ ký</span><span class="v warn" id="bkHd">–</span></div>
-      <div><span class="k">Quá hạn HĐ</span><span class="v bad" id="bkQh">–</span></div>
-      <div><span class="k">Chưa thu</span><span class="v bad" id="bkThu">–</span></div>
+      <div><span class="k">Xác nhận</span><span class="v acc" id="bkXn">–</span></div>
+      <div><span class="k">Thu tiền</span><span class="v bad" id="bkThu">–</span></div>
+      <div><span class="k">Thanh toán</span><span class="v warn" id="bkTt">–</span></div>
       <div><span class="k" id="bkThangLbl">Tổng phí tháng</span><span class="v" id="bkTong" style="font-size:20px">–</span></div>
       <div><span class="k">Khai thác tháng</span><span class="v ok" id="bkKt" style="font-size:20px">–</span></div>
     </div>
@@ -170,9 +170,9 @@
       <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
         <div class="pills" id="bqFilter">
           <button class="pill on" data-f="moi">Cần xử lý</button>
-          <button class="pill" data-f="dang">Đang theo dõi</button>
-          <button class="pill" data-f="hd">Chờ HĐ ký</button>
-          <button class="pill" data-f="thu">Chưa thu</button>
+          <button class="pill" data-f="dang">Xác nhận</button>
+          <button class="pill" data-f="thu">Thu tiền</button>
+          <button class="pill" data-f="tt">Thanh toán</button>
           <button class="pill" data-f="all">Tất cả</button>
         </div>
         <div style="display:flex;gap:8px"><input id="bqFind" class="inp" style="min-height:38px;flex:1;min-width:0" placeholder="Tìm khách, sale, số khung"><button class="btn sm pri" id="btnBhNew" style="white-space:nowrap">+ Đăng ký thay sale</button></div>
@@ -579,8 +579,8 @@ $('#xlsIn').onchange = async e => {
 
 /* ================= BẢO HIỂM ================= */
 let BQ = null, bqF = 'moi', bqCur = null;
-const BUOC = ['Mới gửi', 'Đã đăng ký', 'Bàn giao', 'Chờ HĐ ký', 'Thanh toán', 'Hoàn tất'];
-const CHIP = { 'Mới gửi': 'acc', 'Trả về sale': 'bad', 'Đã đăng ký': 'acc', 'Bàn giao': 'acc', 'Chờ HĐ ký': 'warn', 'Thanh toán': 'acc', 'Hoàn tất': 'ok' };
+const BUOC = ['Sale gửi', 'Xác nhận', 'Thu tiền', 'Thanh toán', 'Hoàn tất'];
+const CHIP = { 'Sale gửi': 'acc', 'Trả về sale': 'bad', 'Xác nhận': 'acc', 'Thu tiền': 'bad', 'Thanh toán': 'warn', 'Hoàn tất': 'ok' };
 const LOAI_BH = ['Công ty tặng', 'Đề xuất mua', 'Khách mua', 'Không'];
 const lower1 = s => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
 const amt = s => Number(String(s || '').replace(/[^\d]/g, '')) || 0;
@@ -589,10 +589,10 @@ async function loadBh(keepId) {
   try {
     BQ = await call('adminBaoHiem', PIN);
     const r = BQ.records, b = BQ.bao;
-    $('#bkMoi').textContent = r.filter(x => x.buoc === 'Mới gửi').length;
-    $('#bkHd').textContent = r.filter(x => x.buoc === 'Chờ HĐ ký').length;
-    $('#bkQh').textContent = r.filter(x => x.quaHanHd).length;
-    $('#bkThu').textContent = r.filter(x => x.thieuThu).length;
+    $('#bkMoi').textContent = r.filter(bqTest.moi).length;
+    $('#bkXn').textContent = r.filter(bqTest.dang).length;
+    $('#bkThu').textContent = r.filter(bqTest.thu).length;
+    $('#bkTt').textContent = r.filter(bqTest.tt).length;
     $('#bkThangLbl').textContent = 'Tổng phí T' + BQ.thang.slice(0, 2);
     $('#bkTong').textContent = num(b.tongThang); $('#bkKt').textContent = num(b.khaiThac);
     renderRep();
@@ -616,55 +616,88 @@ function renderRep() {
   $('#tamHint').textContent = b.tamLuc ? 'Lần trước ' + b.tamLuc + ' · ' + b.tamMoi + ' hồ sơ mới từ đó' : 'Chưa báo lần nào';
 }
 $('#repMonth').onclick = e => { const p = e.target.closest('.pill'); if (p) { repM = p.dataset.m; renderRep(); } };
-const bqTest = { moi: x => x.buoc === 'Mới gửi', dang: x => ['Đã đăng ký', 'Bàn giao', 'Thanh toán', 'Trả về sale'].includes(x.buoc), hd: x => x.buoc === 'Chờ HĐ ký', thu: x => x.thieuThu, all: () => true };
+const bqTest = { moi: x => x.buoc === 'Sale gửi', dang: x => ['Xác nhận', 'Trả về sale'].includes(x.buoc), thu: x => x.buoc === 'Thu tiền' || x.thieuThu, tt: x => x.buoc === 'Thanh toán', all: () => true };
 function phu(x) {
-  if (x.buoc === 'Mới gửi') return x.sale + ' · kích hoạt ' + x.kichHoat.slice(0, 5) + (x.dv ? ' · ' + x.dv : ' · chưa chọn đơn vị');
-  if (x.buoc === 'Chờ HĐ ký') return x.sale + ' · ' + x.dv + (x.nh ? ' · ' + x.nh : '') + ' · hạn HĐ ' + x.hanHd.slice(0, 5);
+  if (x.buoc === 'Sale gửi') return x.sale + ' · kích hoạt ' + x.kichHoat.slice(0, 5) + (x.dv ? ' · ' + x.dv : ' · chưa chọn đơn vị');
+  if (x.buoc === 'Thu tiền') return x.sale + ' · ' + (x.dv || '—') + ' · thu khách ' + num((['Đề xuất mua', 'Khách mua'].includes(x.vcx) && !x.vcxThu ? x.vcxTien : 0) + (['Đề xuất mua', 'Khách mua'].includes(x.tnds) && !x.tndsThu ? x.tndsTien : 0)) + ' đ';
   if (x.buoc === 'Trả về sale') return x.sale + ' · ' + x.lyDo;
   return x.sale + ' · ' + (x.dv || '—') + ' · kích hoạt ' + x.kichHoat.slice(0, 5);
 }
 function renderBq() {
   const q = norm($('#bqFind').value);
-  const lbl = { moi: 'Cần xử lý', dang: 'Đang theo dõi', hd: 'Chờ HĐ ký', thu: 'Chưa thu', all: 'Tất cả' };
+  const lbl = { moi: 'Cần xử lý', dang: 'Xác nhận', thu: 'Thu tiền', tt: 'Thanh toán', all: 'Tất cả' };
   $$('#bqFilter .pill').forEach(p => { p.textContent = lbl[p.dataset.f] + ' · ' + BQ.records.filter(bqTest[p.dataset.f]).length; p.classList.toggle('on', p.dataset.f === bqF); });
   let list = BQ.records.filter(bqTest[bqF]);
   if (q) list = BQ.records.filter(x => norm(x.kh + ' ' + x.sale + ' ' + x.vin).includes(q));
   $('#bqList').innerHTML = list.length ? list.map(x => `<button class="q-item${bqCur && bqCur.id === x.id ? ' on' : ''}" data-id="${esc(x.id)}">
-      <span class="top"><b style="font-size:14px">${esc(x.kh)}</b><span class="chip ${x.quaHanHd ? 'bad' : (CHIP[x.buoc] || 'mute')}">${esc(x.quaHanHd ? 'Quá hạn HĐ' : x.buoc)}</span></span>
+      <span class="top"><b style="font-size:14px">${esc(x.kh)}</b><span class="chip ${CHIP[x.buoc] || 'mute'}">${esc(x.buoc)}</span></span>
       <span class="small muted">${esc(phu(x))}</span>
-      ${x.gap && x.buoc === 'Mới gửi' ? '<span class="small b" style="color:var(--warn)">Gấp</span>' : ''}${x.thieuThu ? '<span class="small b" style="color:var(--bad)">Chưa thu tiền khách</span>' : ''}
+      ${x.gap && x.buoc === 'Sale gửi' ? '<span class="small b" style="color:var(--warn)">Gấp</span>' : ''}${x.thieuThu ? '<span class="small b" style="color:var(--bad)">Chưa thu tiền khách</span>' : ''}
     </button>`).join('') : '<div class="empty">Không có hồ sơ.</div>';
 }
 $('#bqFilter').onclick = e => { const b = e.target.closest('.pill'); if (b) { bqF = b.dataset.f; $('#bqFind').value = ''; renderBq(); } };
 $('#bqFind').oninput = () => renderBq();
 $('#bqList').onclick = e => { const b = e.target.closest('.q-item'); if (b) openBq(b.dataset.id); };
 
-/* Việc cần làm theo bước hiện tại (theo quy trình bảo hiểm 5 bước) */
+/* Việc cần làm theo bước hiện tại (quy trình 5 bước: Sale gửi → Xác nhận → Thu tiền → Thanh toán → Hoàn tất) */
 function tasks(x, f) {
   const tang = f.vcx === 'Công ty tặng' || f.tnds === 'Công ty tặng';
   const t = {
-    'Mới gửi': ['Gửi đăng ký cho đơn vị kèm hóa đơn xe'].concat(tang ? ['Xuất hóa đơn BH cho công ty (phần tặng)'] : []).concat(x.nh ? ['Bổ sung điều khoản ngân hàng ' + x.nh] : []),
-    'Đã đăng ký': (x.nh ? ['Gửi ngân hàng: HĐ BH, thẻ chứng nhận, xác nhận thanh toán, hóa đơn BH' + (tang ? ', xác nhận tặng' : '')] : ['Gửi khách: HĐ BH, thẻ chứng nhận, hóa đơn BH'])
-      .concat(tang ? ['Gửi kế toán: hóa đơn xe, tên khách + số tiền tặng, hóa đơn BH'] : []),
-    'Bàn giao': [(x.nh ? 'Nhắc ngân hàng gửi lại HĐ ký 3 bên' : 'Nhắc khách ký và gửi lại HĐ') + (x.hanHd ? ' (hạn ' + x.hanHd.slice(0, 5) + ')' : '')],
-    'Chờ HĐ ký': ['Đã nhận lại HĐ có đủ chữ ký'],
+    'Xác nhận': ['Gửi tin đăng ký cho đơn vị kèm hóa đơn xe'].concat(tang ? ['Đơn vị xuất hóa đơn phần tặng cho công ty'] : []).concat(x.nh ? ['Bổ sung điều khoản ngân hàng ' + x.nh] : []),
     'Thanh toán': ['Thanh toán phí cho đơn vị'].concat(tang ? ['Bộ hồ sơ thanh toán phần tặng (đề nghị TT, đề xuất, HĐ xe, tỷ lệ phí, GCN, HĐ BH)'] : [])
   };
   return t[x.buoc] || [];
 }
+const SR_DIA_CHI = 'Số 1135 Quốc Lộ 1A, Tân Tạo, HCM';
+/* Tin đăng ký gửi đơn vị bảo hiểm (bước Xác nhận) */
 function emailText(x, f) {
   const v = f.vcx === 'Không' ? 0 : amt(f.vcxTien), t = f.tnds === 'Không' ? 0 : amt(f.tndsTien);
-  const L = ['Đăng ký bảo hiểm: ' + x.kh + ' · ' + x.xe + ' · ' + x.vin, 'Hiệu lực từ: ' + x.kichHoat + ' · ' + x.mucDich];
-  if (v) L.push('Phí VCX (gồm VAT): ' + num(v) + ' đ · ' + lower1(f.vcx));
+  const KT = ['Đề xuất mua', 'Khách mua'];
+  const tang = f.vcx === 'Công ty tặng' || f.tnds === 'Công ty tặng';
+  const mua = (v && KT.includes(f.vcx)) || (t && KT.includes(f.tnds));
+  const nv = x.sale + ' · SĐT: ' + (x.saleSdt || '(chưa có)');
+  const L = ['Đăng ký bảo hiểm: ' + x.kh + ' · ' + x.xe + ' · SK: ' + x.vin, 'Hiệu lực từ: ' + x.kichHoat + (x.mucDich ? ' · ' + x.mucDich : '')];
   if (t) L.push('Phí TNDS (gồm VAT): ' + num(t) + ' đ · ' + lower1(f.tnds));
+  if (v) L.push('Phí VCX (gồm VAT): ' + num(v) + ' đ · ' + lower1(f.vcx));
   L.push('Tổng phí: ' + num(v + t) + ' đ');
-  if (x.nh) L.push('Khách vay ' + x.nh + (x.nhNguoi ? ' (' + x.nhNguoi + ')' : '') + ': vui lòng bổ sung điều khoản ngân hàng thụ hưởng.');
-  if (f.vcx === 'Công ty tặng' || f.tnds === 'Công ty tặng') {
+  if (x.nh) L.push('Ngân hàng ' + x.nh + (x.nhNguoi ? ' · Người phụ trách: ' + x.nhNguoi : ''));
+  if (tang || mua) L.push('');
+  if (tang) {
     const h = BQ.tangHd;
     L.push('Hóa đơn phần tặng xuất cho: ' + h.ten, 'Địa chỉ: ' + h.diaChi, 'MST: ' + h.mst, 'Email nhận hóa đơn: ' + h.email);
   }
+  if (mua) L.push('Hóa đơn phần mua xuất theo thông tin hóa đơn xe của khách hàng.');
+  // Khách vay: gửi thẻ về nhân viên, bộ hồ sơ theo yêu cầu ngân hàng · Trả thẳng: gửi bộ hồ sơ về nhân viên đề nghị
+  if (x.nh) L.push('', 'Gửi thẻ về cho: ' + nv, 'Địa chỉ: ' + SR_DIA_CHI, '', 'Bộ hồ sơ: gửi theo yêu cầu của ngân hàng ' + x.nh + '.');
+  else L.push('', 'Gửi bộ hồ sơ về cho: ' + nv, 'Địa chỉ: ' + SR_DIA_CHI);
+  L.push('', 'Vui lòng kẹp sẵn địa chỉ nhận vào 1 bản hợp đồng để bên em gửi trả về cho bảo hiểm lưu trữ sau khi ký xong. Trong trường hợp quá hạn, anh/chị vui lòng liên hệ với nhân viên đề nghị (chi tiết tại phần thông tin người nhận thư).',
+    'Bên cạnh đó, đối với các hồ sơ chỉ còn 3 ngày là đến hạn thanh toán nhưng chưa hoàn tất đóng phí, nhờ anh/chị thông báo ngay cho Giang để kịp thời xử lý.');
   return L.join('\n');
 }
+/* Đối chiếu bảng phí (_BangPhiBH): TNDS theo dòng xe + mục đích; VCX = max(tỷ lệ × giá HĐ gồm VAT, tối thiểu). Chỉ báo, không chặn. */
+const nkey = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function phiTheoBang(bang, loai, mucDich, gia) {
+  const l = nkey(loai), md = nkey(mucDich);
+  if (!l || !md) return null;
+  const r = (bang || []).find(b => nkey(b.md) === md && b.keys.some(k => l === k || (k.length >= 4 && l.includes(k))));
+  if (!r) return null;
+  return { dong: r.dong, tnds: r.tnds, tyLe: r.tyLe, min: r.min, vcx: gia ? Math.max(Math.round(gia * r.tyLe / 100), r.min) : 0 };
+}
+function phiCheck(bang, loai, mucDich, gia, vcx, vcxTien, tnds, tndsTien) {
+  const p = phiTheoBang(bang, loai, mucDich, gia), out = [];
+  if (!p) return { head: 'Chưa đối chiếu được: ' + (!mucDich ? 'chọn mục đích sử dụng' : 'dòng xe "' + (loai || '?') + '" chưa có trong bảng phí'), rows: [] };
+  const tl = String(p.tyLe).replace('.', ',');
+  if (tnds !== 'Không') { const ok = p.tnds.includes(amt(tndsTien)); out.push({ ok, t: 'TNDS: ' + p.tnds.map(num).join(' / ') + ' đ', d: ok ? 'khớp' : 'đang nhập ' + num(amt(tndsTien)) + ' đ' }); }
+  if (vcx !== 'Không') {
+    if (!gia) out.push({ ok: null, t: 'VCX: ' + tl + '% × giá HĐ (xe chưa có giá hóa đơn)', d: 'chưa tính được' });
+    else { const d = amt(vcxTien) - p.vcx; out.push({ ok: d === 0, t: 'VCX: ' + tl + '% × ' + num(gia) + ' = ' + num(Math.round(gia * p.tyLe / 100)) + (Math.round(gia * p.tyLe / 100) < p.min ? ' < tối thiểu → ' + num(p.min) : '') + ' đ', d: d === 0 ? 'khớp' : 'đang nhập ' + num(amt(vcxTien)) + ' đ · lệch ' + (d > 0 ? '+' : '') + num(d) + ' đ' }); }
+  }
+  return { head: 'Theo bảng phí · ' + p.dong + ' · ' + mucDich + (gia ? ' · giá HĐ ' + num(gia) + ' đ' : ''), rows: out };
+}
+function phiBox(c) {
+  return `<div class="small" style="font-weight:700">${esc(c.head)}</div>` + c.rows.map(r => `<div class="small" style="display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px"><span>${esc(r.t)}</span><b style="margin-left:auto;color:${r.ok === true ? 'var(--ok)' : r.ok === false ? 'var(--warn)' : 'var(--muted)'}">${r.ok === true ? '✓ ' : r.ok === false ? '⚠ ' : ''}${esc(r.d)}</b></div>`).join('');
+}
+const phiHTML = (x, f) => phiBox(phiCheck(BQ.bangPhi, x.loai, x.mucDich, x.giaHd, f.vcx, f.vcxTien, f.tnds, f.tndsTien));
 const driveUrl = id => 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view';
 
 function openBq(id) {
@@ -674,7 +707,7 @@ function openBq(id) {
   drawBq(x);
 }
 function drawBq(x) {
-  const f = bqCur, i = BUOC.indexOf(x.buoc), moi = x.buoc === 'Mới gửi', xong = x.buoc === 'Hoàn tất', tra = x.buoc === 'Trả về sale';
+  const f = bqCur, i = BUOC.indexOf(x.buoc), moi = x.buoc === 'Sale gửi', xong = x.buoc === 'Hoàn tất', tra = x.buoc === 'Trả về sale';
   const pills = (k, label) => `<div style="display:flex;flex-direction:column;gap:6px"><span class="lbl">Phân loại ${label} · sửa nếu sale chọn sai</span>
     <div class="pills" data-k="${k}" style="display:grid;grid-template-columns:repeat(2,1fr)">${LOAI_BH.map(l => `<button class="pill${f[k] === l ? ' on' : ''}" data-v="${l}">${l}</button>`).join('')}</div>
     <span class="hint">Sale chọn: ${esc(k === 'vcx' ? x.vcxSale : x.tndsSale)}</span></div>`;
@@ -698,6 +731,7 @@ function drawBq(x) {
       <div><span class="lbl">Mục đích · vay</span><b>${esc(x.mucDich === 'Kinh doanh' ? 'Kinh doanh' : x.mucDich ? 'Không KD' : '—')}</b><span>${esc(x.nh ? x.nh + (x.nhNguoi ? ' · ' + x.nhNguoi : '') : 'Không vay')}</span></div>
       <div><span class="lbl">Hồ sơ</span>${x.deXuat ? `<a href="${driveUrl(x.deXuat)}" target="_blank" rel="noopener" class="b">Đề xuất bán hàng</a>` : '<span class="muted">Chưa có đề xuất</span>'}${x.fileHd ? `<a href="${driveUrl(x.fileHd)}" target="_blank" rel="noopener" class="b">Hóa đơn xe</a>` : '<span class="muted">Chưa có hóa đơn PDF</span>'}</div>
     </div>
+    <div id="fPhi" style="display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:12px;padding:10px 12px">${phiHTML(x, f)}</div>
     ${x.ghiSale ? `<div class="small"><b>Sale ghi:</b> ${esc(x.ghiSale)}</div>` : ''}
     <div style="display:flex;flex-direction:column;gap:8px"><span class="lbl">Đơn vị bảo hiểm <span class="req">*</span> · tỷ trọng T${esc(BQ.thang.slice(0, 2))}</span>
       <div class="dvs" id="fDv">${BQ.share.map(s => `<button class="dv${f.dv === s.dv ? ' on' : ''}" data-v="${esc(s.dv)}" ${xong ? 'disabled' : ''}><b>${esc(s.dv)}</b><span>${String(s.pct).replace('.', ',')}%</span></button>`).join('')}</div></div>
@@ -712,7 +746,8 @@ function drawBq(x) {
         <label class="field" style="margin-top:6px"><span class="lbl">Ghi chú</span><input class="inp" id="fGhi" value="${esc(f.ghiChu)}" maxlength="500"></label>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Email đăng ký soạn sẵn</span><button class="btn sm out" id="fMail">Sao chép</button></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Tin đăng ký gửi đơn vị</span><button class="btn sm out" id="fMail">Sao chép</button></div>
+        ${x.saleSdt ? '' : `<span class="hint" style="color:var(--warn)">Chưa có SĐT của ${esc(x.sale)}: điền cột SĐT (cột G) ở sheet _DanhMuc.</span>`}
         <div class="small" id="fMailTxt" style="white-space:pre-line;line-height:1.5">${esc(emailText(x, f))}</div>
       </div>
     </div>
@@ -737,7 +772,8 @@ $('#bhDetail').addEventListener('click', e => {
     return busy(e.target, '', async () => { try { await call('adminBhReturn', PIN, bqCur.id, ly); toast('Đã trả về sale'); await loadBh(bqCur.id); } catch (err) { toast(err, 1); } });
   }
 });
-$('#bhDetail').addEventListener('input', e => { if (e.target.id === 'fV' || e.target.id === 'fT') { pull(); $('#fMailTxt').textContent = emailText(BQ.records.find(r => r.id === bqCur.id), bqCur); } });
+$('#bhDetail').addEventListener('input', e => {
+  if (e.target.id === 'fV' || e.target.id === 'fT') { pull(); const x = BQ.records.find(r => r.id === bqCur.id); $('#fMailTxt').textContent = emailText(x, bqCur); $('#fPhi').innerHTML = phiHTML(x, bqCur); } });
 function pull() {
   if (!$('#fV')) return;
   bqCur.vcxTien = amt($('#fV').value); bqCur.tndsTien = amt($('#fT').value);
@@ -749,7 +785,7 @@ function pull() {
 function saveBq(tiep, btn) {
   pull();
   const f = bqCur, x = BQ.records.find(r => r.id === f.id);
-  if (tiep && x.buoc === 'Mới gửi' && !f.dv) return toast('Vui lòng chọn đơn vị bảo hiểm.', 1);
+  if (tiep && x.buoc === 'Sale gửi' && !f.dv) return toast('Vui lòng chọn đơn vị bảo hiểm.', 1);
   const p = { dv: f.dv, vcx: f.vcx, tnds: f.tnds, vcxTien: f.vcxTien, tndsTien: f.tndsTien, vcxThu: f.vcxThu, tndsThu: f.tndsThu, viec: f.viec, ghiChu: f.ghiChu };
   busy(btn, 'Đang lưu', async () => {
     try { const r = await call('adminBhSave', PIN, f.id, p, tiep); toast(tiep ? 'Đã chuyển: ' + r.buoc : 'Đã lưu'); await loadBh(f.id); }

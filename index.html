@@ -183,11 +183,12 @@
       </div>
     </div>
     <div class="hint" id="bhTong"></div>
+    <div id="bhPhi" style="display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:12px;padding:10px 12px" hidden></div>
 
     <div class="field"><span class="lbl">Vay ngân hàng</span>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <select id="bhNh" class="inp" aria-label="Ngân hàng"><option>Không vay</option></select>
-        <input id="bhNhNguoi" class="inp" placeholder="Người phụ trách" aria-label="Người phụ trách ngân hàng" disabled>
+        <input id="bhNhNguoi" class="inp" placeholder="Người phụ trách · SĐT" aria-label="Người phụ trách ngân hàng và số điện thoại" disabled>
       </div></div>
 
     <div class="field"><span class="lbl">Đề xuất bán hàng · không bắt buộc</span>
@@ -344,7 +345,7 @@ $('#dSave').onclick = () => busy($('#dSave'), 'Đang lưu', async () => {
 
 /* ================= BẢO HIỂM ================= */
 let BH = null, bhSel = null, bhEdit = null, bhDx = null;
-const BH_CHIP = { 'Mới gửi': 'acc', 'Trả về sale': 'bad', 'Đã đăng ký': 'acc', 'Bàn giao': 'acc', 'Chờ HĐ ký': 'warn', 'Thanh toán': 'acc', 'Hoàn tất': 'ok' };
+const BH_CHIP = { 'Sale gửi': 'acc', 'Trả về sale': 'bad', 'Xác nhận': 'acc', 'Thu tiền': 'warn', 'Thanh toán': 'acc', 'Hoàn tất': 'ok' };
 const lower1 = s => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
 
 async function loadBh() {
@@ -370,8 +371,8 @@ function goi(x) {
 }
 function nhac(x) {
   if (x.buoc === 'Trả về sale') return ['bad', 'Giang trả về: ' + x.lyDo + '. Bấm để sửa và gửi lại.'];
-  if (x.buoc === 'Chờ HĐ ký') return [x.quaHanHd ? 'bad' : '', (x.nh ? 'Ngân hàng gửi lại hợp đồng ký 3 bên' : 'Gửi lại hợp đồng có đủ chữ ký') + ' trước ' + x.hanHd.slice(0, 5) + (x.quaHanHd ? ' · đã quá hạn' : '')];
-  if (x.buoc === 'Mới gửi' && x.gap) return ['', 'Báo gấp · Giang đang xử lý'];
+  if (x.buoc === 'Thu tiền') return ['', 'Chờ thu tiền khách phần mua bảo hiểm'];
+  if (x.buoc === 'Sale gửi' && x.gap) return ['', 'Báo gấp · Giang đang xử lý'];
   return null;
 }
 function renderBh() {
@@ -390,7 +391,7 @@ function renderBh() {
 $('#bhList').onclick = e => {
   const b = e.target.closest('.bh-card'); if (!b) return;
   const x = BH.records.find(r => r.id === b.dataset.id);
-  if (x && (x.buoc === 'Trả về sale' || x.buoc === 'Mới gửi')) openBh(x);
+  if (x && (x.buoc === 'Trả về sale' || x.buoc === 'Sale gửi')) openBh(x);
   else if (x) toast('Hồ sơ đang ở bước ' + x.buoc + '. Cần sửa vui lòng liên hệ Giang.');
 };
 
@@ -406,7 +407,7 @@ function openBh(rec) {
   bhEdit = rec || null; bhDx = null;
   $('#bhTitle').textContent = rec ? 'Sửa và gửi lại' : 'Kích hoạt bảo hiểm';
   $('#bhLyDo').hidden = !(rec && rec.lyDo); $('#bhLyDo').textContent = rec && rec.lyDo ? 'Giang trả về: ' + rec.lyDo : '';
-  $('#bhFind').value = ''; bhSel = rec ? BH.cars.find(c => c.vin === rec.vin) || { vin: rec.vin, kh: rec.kh, xe: rec.xe, mau: rec.mau, hd: rec.hd } : null;
+  $('#bhFind').value = ''; bhSel = rec ? BH.cars.find(c => c.vin === rec.vin) || { vin: rec.vin, kh: rec.kh, xe: rec.xe, mau: rec.mau, hd: rec.hd, loai: rec.loai, gia: rec.giaHd } : null;
   $('#bhFind').disabled = !!rec;
   $('#bhNgay').value = rec ? toISO(rec.kichHoat) : '';
   setPill($('#bhMd'), rec ? rec.mucDich : '');
@@ -445,9 +446,32 @@ function renderCars() {
 $('#bhFind').oninput = () => { bhSel = null; renderCars(); };
 $('#bhCars').onclick = e => {
   const b = e.target.closest('.car-opt[data-vin]'); if (!b || b.disabled) return;
-  bhSel = BH.cars.find(c => c.vin === b.dataset.vin); $('#bhFind').value = ''; renderCars();
+  bhSel = BH.cars.find(c => c.vin === b.dataset.vin); $('#bhFind').value = ''; renderCars(); syncBh();
 };
 
+/* Đối chiếu bảng phí (_BangPhiBH): TNDS theo dòng xe + mục đích; VCX = max(tỷ lệ × giá HĐ gồm VAT, tối thiểu). Chỉ báo, không chặn. */
+const nkey = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function phiTheoBang(bang, loai, mucDich, gia) {
+  const l = nkey(loai), md = nkey(mucDich);
+  if (!l || !md) return null;
+  const r = (bang || []).find(b => nkey(b.md) === md && b.keys.some(k => l === k || (k.length >= 4 && l.includes(k))));
+  if (!r) return null;
+  return { dong: r.dong, tnds: r.tnds, tyLe: r.tyLe, min: r.min, vcx: gia ? Math.max(Math.round(gia * r.tyLe / 100), r.min) : 0 };
+}
+function phiCheck(bang, loai, mucDich, gia, vcx, vcxTien, tnds, tndsTien) {
+  const p = phiTheoBang(bang, loai, mucDich, gia), out = [];
+  if (!p) return { head: 'Chưa đối chiếu được: ' + (!mucDich ? 'chọn mục đích sử dụng' : 'dòng xe "' + (loai || '?') + '" chưa có trong bảng phí'), rows: [] };
+  const tl = String(p.tyLe).replace('.', ',');
+  if (tnds !== 'Không') { const ok = p.tnds.includes(amt(tndsTien)); out.push({ ok, t: 'TNDS: ' + p.tnds.map(num).join(' / ') + ' đ', d: ok ? 'khớp' : 'đang nhập ' + num(amt(tndsTien)) + ' đ' }); }
+  if (vcx !== 'Không') {
+    if (!gia) out.push({ ok: null, t: 'VCX: ' + tl + '% × giá HĐ (xe chưa có giá hóa đơn)', d: 'chưa tính được' });
+    else { const d = amt(vcxTien) - p.vcx; out.push({ ok: d === 0, t: 'VCX: ' + tl + '% × ' + num(gia) + ' = ' + num(Math.round(gia * p.tyLe / 100)) + (Math.round(gia * p.tyLe / 100) < p.min ? ' < tối thiểu → ' + num(p.min) : '') + ' đ', d: d === 0 ? 'khớp' : 'đang nhập ' + num(amt(vcxTien)) + ' đ · lệch ' + (d > 0 ? '+' : '') + num(d) + ' đ' }); }
+  }
+  return { head: 'Theo bảng phí · ' + p.dong + ' · ' + mucDich + (gia ? ' · giá HĐ ' + num(gia) + ' đ' : ''), rows: out };
+}
+function phiBox(c) {
+  return `<div class="small" style="font-weight:700">${esc(c.head)}</div>` + c.rows.map(r => `<div class="small" style="display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px"><span>${esc(r.t)}</span><b style="margin-left:auto;color:${r.ok === true ? 'var(--ok)' : r.ok === false ? 'var(--warn)' : 'var(--muted)'}">${r.ok === true ? '✓ ' : r.ok === false ? '⚠ ' : ''}${esc(r.d)}</b></div>`).join('');
+}
 /* Ngày làm việc (CN nghỉ, T7 nghỉ). Ngày lễ do máy chủ kiểm tra lại. */
 function workDays(toISOstr) {
   const t = new Date(toISOstr + 'T00:00:00'); const d = new Date(); d.setHours(0, 0, 0, 0);
@@ -466,6 +490,11 @@ function syncBh() {
   if (v && n < BH.baoTruoc) $('#bhGap').textContent = 'Báo gấp · trước ' + n + ' ngày làm việc (quy định ' + BH.baoTruoc + ' ngày)';
   const tong = amt($('[data-part=vcx] input').value) + amt($('[data-part=tnds] input').value);
   $('#bhTong').textContent = tong ? 'Tổng phí: ' + money(tong) : '';
+  // Đối chiếu bảng phí: chỉ để kiểm tra, không chặn gửi
+  const vb = $('[data-part=vcx]'), tb = $('[data-part=tnds]'), vk = getPill(vb), tk = getPill(tb);
+  const showPhi = !!(bhSel && (vk && vk !== 'Không' || tk && tk !== 'Không'));
+  $('#bhPhi').hidden = !showPhi;
+  if (showPhi) $('#bhPhi').innerHTML = phiBox(phiCheck(BH.bangPhi, bhSel.loai, getPill($('#bhMd')), bhSel.gia, vk || 'Không', $('input', vb).value, tk || 'Không', $('input', tb).value));
   $('#bhNhNguoi').disabled = $('#bhNh').value === 'Không vay';
   if ($('#bhNhNguoi').disabled) $('#bhNhNguoi').value = '';
 }
