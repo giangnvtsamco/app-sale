@@ -491,6 +491,7 @@ function vOk(v) { return /^[A-Z0-9]{17}$/.test(String(v || '').toUpperCase().rep
 function dOk(v) { return /^\d{2}\/\d{2}\/\d{4}$/.test(v || ''); }
 function check(r) {
   const vin = String(r.vin || '').toUpperCase();
+  if (r.dienGia) return Number(String(r.gia).replace(/[^\d]/g, '')) ? ['ok', 'Xe đã có · điền giá'] : ['bad', 'Xe đã có · nhập giá'];
   if (r.dup || rows.some(x => x !== r && String(x.vin).toUpperCase() === vin && rows.indexOf(x) < rows.indexOf(r))) return ['bad', 'Trùng số khung'];
   if (!vOk(r.vin)) return ['warn', 'Kiểm tra số khung'];
   if (!String(r.kh || '').trim()) return ['warn', 'Thiếu tên khách'];
@@ -546,11 +547,12 @@ $('#btnSave').onclick = () => {
   busy($('#btnSave'), 'Đang lưu', async () => {
     try {
       const r = await call('importCars', PIN, ok.map(x => ({ vin: x.vin, kh: x.kh, loai: x.loai, soLoai: x.soLoai || '', mau: x.mau, ngay: x.ngay, soHd: x.soHd, hopDong: x.hopDong || '', gia: x.gia, sale: x.sale, tenGoc: x.tenGoc, fileId: x.fileId || '' })));
-      const skipVin = new Set(r.skip.map(s => s.vin));
+      const dien = r.skip.filter(s => /đã điền giá/.test(s.ly)).length;
+      const skipVin = new Set(r.skip.filter(s => !/đã điền giá/.test(s.ly)).map(s => s.vin));
       rows = rows.filter(x => !ok.includes(x) || skipVin.has(String(x.vin).toUpperCase()));
       r.skip.forEach(s => { const x = rows.find(y => String(y.vin).toUpperCase() === s.vin); if (x && s.ly === 'Trùng số khung') x.dup = true; });
       renderRv();
-      toast('Đã lưu ' + r.saved + ' xe' + (r.skip.length ? ' · bỏ qua ' + r.skip.length : ''));
+      toast('Đã lưu ' + r.saved + ' xe' + (dien ? ' · điền giá ' + dien + ' xe đã có' : '') + (r.skip.length - dien ? ' · bỏ qua ' + (r.skip.length - dien) : ''));
       if (r.saved) { $('#zalo').value = ''; loadCavet(); }
     } catch (e) { toast(e, 1); }
   });
