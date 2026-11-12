@@ -6,7 +6,6 @@
 |---|---|---|
 | `index.html` | Sale (iPhone) | Đăng nhập PIN · tab Cavet · tab Bảo hiểm · tab Lái thử |
 | `laithu/index.html` | Bộ phận khác | Link riêng /laithu: chọn tên, không PIN, chỉ xe lái thử |
-| `lt.js` | — | Giao diện lái thử dùng chung + in hồ sơ 2 trang A4 |
 | `quanly.html` | Chỉ Giang (máy tính) | Đối chiếu cavet · Xử lý bảo hiểm + báo cáo · Lái thử (nhật trình, sửa ODO, sạc pin, lệnh dịch vụ) · Nhập xe |
 | `apps-script/Code.gs` | — | API chung + Cavet |
 | `apps-script/BaoHiem.gs` | — | API Bảo hiểm + báo cáo BC_BaoHiem |
