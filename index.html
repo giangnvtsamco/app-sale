@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
-<link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/v1/style.css">
+<link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/v1/style.css?v=1.1">
 <style>
   .login{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:420px;margin:0 auto;
     padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom))}
@@ -41,6 +41,11 @@
   .pills.g4 .pill{padding:0 8px}
   .gap-line{font-size:12px;font-weight:700;color:var(--warn)}
   mark{background:#fff3b0;color:inherit;border-radius:3px}
+  .pinpad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;justify-content:center}
+  .pinpad button{height:56px;border-radius:14px;background:var(--paper);border:1px solid var(--line);font-size:20px;font-weight:600;cursor:pointer;color:inherit}
+  .pinpad button:active{background:var(--accent-soft)}
+  .dots{display:flex;gap:12px;justify-content:center}.dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--accent);display:block}.dots i.f{background:var(--accent)}
+  .dots.shake{animation:shake .35s}@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 </style>
 </head>
 <body>
@@ -56,10 +61,18 @@
   <div class="card" style="display:flex;flex-direction:column;gap:14px">
     <label class="field"><span class="lbl">Nhân viên <span class="req">*</span></span>
       <select id="lgTen" class="inp"><option value="">Đang tải…</option></select></label>
-    <label class="field"><span class="lbl">Mã PIN <span class="req">*</span></span>
-      <input id="lgPin" class="inp mono" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8"></label>
-    <button id="lgBtn" class="btn cta pri">Đăng nhập</button>
-    <div class="hint" style="text-align:center">Quên mã PIN? Vui lòng liên hệ Giang.</div>
+    <div id="pinBox" style="display:flex;flex-direction:column;gap:14px;padding-top:4px">
+      <span class="lbl" style="text-align:center">Mã PIN 4 số</span>
+      <div class="dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+      <div class="pinpad" id="pinPad">
+        <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+        <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+        <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+        <span></span><button data-k="0">0</button><button data-k="del" aria-label="Xóa">⌫</button>
+      </div>
+      <span class="small" id="pinMsg" style="text-align:center;color:var(--bad);min-height:1.4em"></span>
+    </div>
+    <div class="hint" style="text-align:center">Đủ 4 số là tự vào · Quên mã PIN? Vui lòng liên hệ Giang.</div>
   </div>
   <a href="quanly" class="small" style="text-align:center;color:var(--muted)">Dành cho quản lý</a>
 </section>
@@ -69,13 +82,13 @@
   <div class="hd">
     <div class="hd-l" style="flex:1">
       <div class="who"><span class="brand">SAMCO</span><button id="btnOut" title="Đăng xuất"></button></div>
-      <div class="title" id="pgTitle">Cavet</div>
-      <div class="sub" id="pgSub">Hạn 20 ngày từ ngày hóa đơn</div>
+      <div class="title" id="pgTitle">Bảo hiểm</div>
+      <div class="sub" id="pgSub">Kích hoạt · báo trước 3 ngày làm việc</div>
       <div class="chrome"></div>
     </div>
   </div>
 
-  <section id="tabCavet">
+  <section id="tabCavet" hidden>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="kpi">
         <div><span class="k">Xe của tôi</span><span class="v" id="kTong">–</span></div>
@@ -91,18 +104,19 @@
     </div>
   </section>
 
-  <section id="tabBaoHiem" hidden>
+  <section id="tabBaoHiem">
     <div style="display:flex;flex-direction:column;gap:12px">
       <button class="btn cta pri" id="bhNew">Kích hoạt mới</button>
       <span class="sect">Hồ sơ của tôi</span>
       <div class="list" id="bhList"><div class="loading"><span class="spin"></span>Đang tải…</div></div>
     </div>
   </section>
+  <div id="appFoot" style="padding-bottom:70px"></div>
 </main>
 
 <nav class="tabbar" id="tabbar" hidden>
-  <button class="on" data-tab="Cavet">Cavet</button>
-  <button data-tab="BaoHiem">Bảo hiểm</button>
+  <button class="on" data-tab="BaoHiem">Bảo hiểm</button>
+  <button data-tab="Cavet">Cavet</button>
   <a href="https://xedemo.vinfastsamcobinhtan.com" target="_blank" rel="noopener" style="flex:1;max-width:180px;min-height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:13px;font-weight:600;color:var(--muted)">Xe demo ↗</a>
 </nav>
 
@@ -206,9 +220,13 @@
 
 <script src="config.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/v1/api.js"></script>
-<script src="https://giangnvtsamco.github.io/samco-core/v1/ui.js"></script>
+<script src="https://giangnvtsamco.github.io/samco-core/v1/ui.js?v=1.1"></script>
 <script>
-const KEY = 'appsale_auth';
+const KEY = 'appsale_auth', APP_V = '1.5.0';
+/* Lưu bản dữ liệu gần nhất trên máy: mở app là thấy ngay, rồi cập nhật ngầm */
+const cacheKey = () => 'appsale_cache_' + (auth && auth.ten || '');
+const cacheGet = () => store.get(cacheKey()) || {};
+const cachePut = (k, v) => { const c = cacheGet(); c[k] = v; store.set(cacheKey(), c); };
 let auth = store.get(KEY);
 let cars = [], filter = 'can', cur = null, anhB64 = '';
 
@@ -223,33 +241,44 @@ async function showLogin() {
   } catch (e) { $('#lgTen').innerHTML = '<option value="">Không tải được</option>'; toast(e, 1); }
 }
 
-$('#lgBtn').onclick = () => {
-  const ten = $('#lgTen').value, pin = $('#lgPin').value.trim();
-  if (!ten) return toast('Vui lòng chọn tên.', 1);
-  if (!pin) return toast('Vui lòng nhập mã PIN.', 1);
-  busy($('#lgBtn'), 'Đang kiểm tra', async () => {
-    try {
-      await call('login', { ten, pin });
-      auth = { ten, pin }; store.set(KEY, auth); store.set('appsale_last', ten);
-      $('#lgPin').value = ''; startApp();
-    } catch (e) { toast(e, 1); }
-  });
-};
-$('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
+/* Mã PIN: bàn phím số, đủ 4 số là tự đăng nhập (không cần bấm nút) */
+let code = '', dangVao = false;
+const dots = () => $$('#pinDots i').forEach((d, i) => d.classList.toggle('f', i < code.length));
+async function tryPin() {
+  const ten = $('#lgTen').value;
+  if (!ten) { code = ''; dots(); return toast('Vui lòng chọn tên trước.', 1); }
+  dangVao = true; $('#pinMsg').textContent = 'Đang kiểm tra…';
+  try {
+    await call('login', { ten, pin: code });
+    auth = { ten, pin: code }; store.set(KEY, auth); store.set('appsale_last', ten);
+    $('#pinMsg').textContent = ''; startApp();
+  } catch (e) {
+    $('#pinMsg').textContent = String(e);
+    const d = $('#pinDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
+  } finally { code = ''; dots(); dangVao = false; }
+}
+function pinKey(k) {
+  if (dangVao || $('#vLogin').hidden) return;
+  if (k === 'del') code = code.slice(0, -1); else if (/^\d$/.test(k) && code.length < 4) code += k;
+  dots(); if (code.length === 4) tryPin();
+}
+$('#pinPad').onclick = e => { const b = e.target.closest('button[data-k]'); if (b) pinKey(b.dataset.k); };
+document.addEventListener('keydown', e => { if (/^\d$/.test(e.key)) pinKey(e.key); else if (e.key === 'Backspace') pinKey('del'); });
+$('#lgTen').onchange = () => { code = ''; dots(); $('#pinMsg').textContent = ''; };
 
 $('#btnOut').onclick = () => {
   if (!confirm('Đăng xuất khỏi máy này?')) return;
-  store.del(KEY); auth = null; showLogin();
+  store.del(KEY); store.del(cacheKey()); auth = null; cars = []; BH = null; showLogin();
 };
 
 /* ---------- App ---------- */
 function startApp() {
   $('#vLogin').hidden = true; $('#vApp').hidden = false; $('#tabbar').hidden = false;
   $('#btnOut').textContent = auth.ten + ' · Đăng xuất';
-  loadCavet();
+  $('#tabbar button[data-tab="BaoHiem"]').click(); // mở đầu ở tab Bảo hiểm
 }
 
-let tab = 'Cavet';
+let tab = 'BaoHiem';
 $$('#tabbar button[data-tab]').forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
   $$('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
@@ -257,20 +286,28 @@ $$('#tabbar button[data-tab]').forEach(b => b.onclick = () => {
   $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm' }[tab];
   $('#pgSub').textContent = { Cavet: 'Hạn 20 ngày từ ngày hóa đơn', BaoHiem: 'Kích hoạt · báo trước 3 ngày làm việc' }[tab];
   if (tab === 'BaoHiem' && !BH) loadBh();
+  if (tab === 'Cavet' && !cars.length) loadCavet();
   window.scrollTo(0, 0);
 });
 
+function showCavet(d) {
+  cars = d.cars;
+  const k = { tong: cars.length, xong: cars.filter(x => x.st.nhom === 'xong').length,
+    can: cars.filter(x => x.st.nhom === 'can' || x.st.nhom === 'quahan').length, quahan: cars.filter(x => x.st.nhom === 'quahan').length };
+  $('#kTong').textContent = k.tong; $('#kXong').textContent = k.xong; $('#kCan').textContent = k.can; $('#kQh').textContent = k.quahan;
+  renderCavet();
+}
 async function loadCavet() {
-  $('#cvList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
+  const cc = cacheGet().cavet;
+  if (cc && !cars.length) showCavet(cc); // hiện ngay bản lần trước
+  else if (!cars.length) $('#cvList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
   try {
     const d = await call('myCavet', auth);
     lastLoad = Date.now();
-    cars = d.cars;
-    $('#kTong').textContent = d.kpi.tong; $('#kXong').textContent = d.kpi.xong;
-    $('#kCan').textContent = d.kpi.can; $('#kQh').textContent = d.kpi.quahan;
-    renderCavet();
+    cachePut('cavet', d); showCavet(d);
   } catch (e) {
-    if (/PIN/.test(String(e))) { store.del(KEY); auth = null; toast(e, 1); return showLogin(); }
+    if (/PIN/.test(String(e))) { store.del(KEY); store.del(cacheKey()); auth = null; cars = []; BH = null; toast(e, 1); return showLogin(); }
+    if (cars.length) return toast(String(e) + ' Đang hiện dữ liệu lần trước.', 1);
     $('#cvList').innerHTML = `<div class="empty">${esc(e)}<br><button class="btn sm out" style="margin-top:10px" onclick="loadCavet()">Thử lại</button></div>`;
   }
 }
@@ -339,7 +376,7 @@ $('#dSave').onclick = () => busy($('#dSave'), 'Đang lưu', async () => {
   try {
     const x = await call('saveCavet', auth, cur.id, { soCavet: $('#fSo').value, ghiChu: $('#fGhi').value, daGui: $('#fGui').checked, anh: anhB64 });
     const i = cars.findIndex(c => c.id === x.id); if (i >= 0) cars[i] = x;
-    closeCar(); toast('Đã lưu'); loadCavet();
+    closeCar(); toast('Đã lưu'); showCavet({ cars }); cachePut('cavet', { cars }); // cập nhật tại chỗ, không tải lại cả danh sách
   } catch (e) { toast(e, 1); }
 });
 
@@ -349,17 +386,22 @@ const BH_CHIP = { 'Sale gửi': 'acc', 'Trả về sale': 'bad', 'Xác nhận': 
 const lower1 = s => String(s || '').charAt(0).toLowerCase() + String(s || '').slice(1);
 
 async function loadBh() {
-  $('#bhList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
+  const cb = cacheGet().bh;
+  if (cb && !BH) { BH = cb; showBh(); } else if (!BH) $('#bhList').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
   try {
     BH = await call('bhInit', auth);
-    lastLoad = Date.now();
-    $('#bhNh').innerHTML = '<option>Không vay</option>' + BH.banks.map(b => `<option>${esc(b)}</option>`).join('');
-    $('#pgSub').textContent = 'Kích hoạt · báo trước ' + BH.baoTruoc + ' ngày làm việc';
-    renderBh();
+    lastLoad = Date.now(); cachePut('bh', BH);
+    showBh();
   } catch (e) {
-    if (/PIN/.test(String(e))) { store.del(KEY); auth = null; toast(e, 1); return showLogin(); }
+    if (/PIN/.test(String(e))) { store.del(KEY); store.del(cacheKey()); auth = null; cars = []; BH = null; toast(e, 1); return showLogin(); }
+    if (BH) return toast(String(e) + ' Đang hiện dữ liệu lần trước.', 1);
     $('#bhList').innerHTML = `<div class="empty">${esc(e)}<br><button class="btn sm out" style="margin-top:10px" onclick="loadBh()">Thử lại</button></div>`;
   }
+}
+function showBh() {
+  if ($('#bhDlg').hidden) $('#bhNh').innerHTML = '<option>Không vay</option>' + BH.banks.map(b => `<option>${esc(b)}</option>`).join('');
+  if (tab === 'BaoHiem') $('#pgSub').textContent = 'Kích hoạt · báo trước ' + BH.baoTruoc + ' ngày làm việc';
+  renderBh();
 }
 
 function goi(x) {
@@ -546,6 +588,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Khởi động ---------- */
+appFoot('App Sale', APP_V, $('#appFoot'));
 if (auth && auth.ten) startApp(); else showLogin();
 </script>
 </body>
