@@ -11,13 +11,14 @@ Dùng bộ chung `samco-core/v1`.
 | Link | Ai dùng | Nội dung |
 |---|---|---|
 | `/` | Sale (điện thoại) | Đăng nhập PIN 4 số · Bảo hiểm · Cavet |
-| `/quanly` | Giang (máy tính) | Xử lý bảo hiểm 5 bước · Đối chiếu cavet · Nhập xe từ hóa đơn |
+| `/quanly` | Giang (máy tính) | Xử lý bảo hiểm 5 bước · Đối chiếu cavet · Nhập xe từ hóa đơn · Tờ trình |
 | `/laithu` | link cũ | Tự chuyển sang Xe Demo |
 
 ## File
 | File | Vai trò |
 |---|---|
 | `index.html`, `quanly.html` | Giao diện |
+| `totrinh.js` | Tab Tờ trình của trang Quản lý |
 | `config.js` | Link `/exec` của Apps Script |
 | `version.json` | Số phiên bản hiện tại (app so sánh để báo "Đã có bản mới") |
 | `icon.svg`, `icon-180.png` | Biểu tượng (trình duyệt, màn hình iPhone) |
