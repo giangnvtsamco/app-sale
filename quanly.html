@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Quản lý · App Sale SAMCO</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="https://giangnvtsamco.github.io/samco-core/v1/style.css?v=1.1">
 <style>
+  /* trải nghiệm như app: chạm 2 lần không phóng to, không nháy xanh khi chạm */
+  html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  button,a,label{-webkit-tap-highlight-color:transparent}
   .grid2{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
   @media (max-width:980px){.grid2{grid-template-columns:1fr}}
   .side{display:flex;flex-direction:column;gap:14px}
@@ -54,6 +57,8 @@
   .tt-form{display:flex;flex-direction:column;gap:12px;min-width:0}
   .tt-form .card{display:flex;flex-direction:column;gap:8px}
   .tt-types{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .tt-xe{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:7px 10px;cursor:pointer;font:inherit;color:inherit}
+  .tt-xe:hover{border-color:var(--accent)}
   .tt-types .pill{justify-content:flex-start;text-align:left;border-radius:10px;min-height:38px}
   .tt-types .pill:disabled{opacity:.4;cursor:not-allowed}
   .tted{table-layout:fixed;width:100%}.tted td,.tted th{padding:4px 3px}.tted th{white-space:normal;line-height:1.2}.tted input.inp{min-height:34px;font-size:12.5px;padding:0 6px;border-radius:8px}
@@ -225,7 +230,8 @@
   <section id="vToTrinh" style="display:flex;flex-direction:column;gap:14px" hidden>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="pills" id="ttSub"><button class="pill on" type="button" data-s="soan">Soạn</button><button class="pill" type="button" data-s="so">Sổ tờ trình</button></div>
-      <button class="btn sm" id="ttNew" style="margin-left:auto">+ Giấy mới</button>
+      <button class="btn sm" id="ttDmBtn" style="margin-left:auto" title="File Excel danh mục PK (sheet DMSP PK)">Nạp danh mục PK</button><input type="file" id="ttDmFile" accept=".xlsx,.xls" hidden>
+      <button class="btn sm" id="ttNew">+ Giấy mới</button>
     </div>
     <div id="ttBody"></div>
     <div id="ttSoanBox" hidden>
@@ -236,24 +242,27 @@
         <div class="card" id="ttCapBox"><span class="sect">2 · Trình ai duyệt</span>
           <select id="ttCap" class="inp"></select><span class="hint" id="ttCapNote"></span>
           <span class="hint">Kính gửi, căn cứ ủy quyền, ô ký lấy từ sheet _CanCu.</span></div>
-        <div class="card" id="ttGocBox" hidden><span class="sect">2 · Căn cứ tờ trình</span>
-          <select id="ttGoc" class="inp"></select><span class="hint">Chọn tờ trình đã duyệt: app chép danh mục sản phẩm và câu căn cứ.</span></div>
+        <div class="card" id="ttGocBox" hidden><span class="sect" id="ttGocH">2 · Căn cứ tờ trình</span>
+          <select id="ttGoc" class="inp"></select><span class="hint" id="ttGocHint">Chọn tờ trình đã duyệt: app chép danh mục sản phẩm và câu căn cứ.</span></div>
         <div class="card"><span class="sect">3 · Nội dung</span>
-          <label class="field"><span class="lbl">Về việc <span class="req">*</span></span><textarea id="tt_vv" class="inp" style="min-height:58px"></textarea></label>
-          <label class="field" id="ttCcBox"><span class="lbl">Căn cứ riêng · mỗi dòng một căn cứ</span><textarea id="tt_cc" class="inp" style="min-height:64px" placeholder="Căn cứ ủy quyền đã tự có theo cấp duyệt"></textarea></label>
-          <label class="field" id="ttMdBox"><span class="lbl">Đoạn mở đầu · {nguoi} {cap} tự thay</span><textarea id="tt_md" class="inp" style="min-height:84px"></textarea></label>
+          <label class="field"><span class="lbl"><span id="ttL_vv">Về việc</span> <span class="req">*</span></span><textarea id="tt_vv" class="inp" style="min-height:58px"></textarea></label>
+          <label class="field" id="ttCcBox"><span class="lbl" id="ttL_cc">Căn cứ riêng · mỗi dòng một căn cứ</span><textarea id="tt_cc" class="inp" style="min-height:64px" placeholder="Căn cứ ủy quyền đã tự có theo cấp duyệt"></textarea></label>
+          <label class="field" id="ttMdBox"><span class="lbl" id="ttL_md">Đoạn mở đầu · {nguoi} {cap} tự thay</span><textarea id="tt_md" class="inp" style="min-height:84px"></textarea></label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <label class="field" id="ttSoBox"><span class="lbl">Số</span><input id="tt_so" class="inp mono" placeholder="Văn thư cấp sau"></label>
             <label class="field"><span class="lbl">Ngày</span><input id="tt_ngay" class="inp mono" type="date"></label>
           </div></div>
         <div class="card"><span class="sect">4 · Bảng</span>
+          <div id="ttXeBox" hidden style="display:flex;flex-direction:column;gap:6px">
+            <input id="ttXeQ" class="inp" placeholder="Tìm xe khách: gõ số khung (vài số cuối) hoặc tên khách" autocomplete="off">
+            <div id="ttXeKq" style="display:flex;flex-direction:column;gap:4px"></div></div>
           <div id="ttTbl"></div><datalist id="ttDm"></datalist>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="ttAddRow" type="button">+ Thêm dòng</button><button class="btn sm" id="ttAddSec" type="button">+ Thêm mục</button></div>
-          <span class="hint">Gõ mã SP có trong _DanhMucPK là tự điền tên và giá. Mã chưa có thì gõ tay.</span>
+          <span class="hint" id="ttTblHint">Gõ mã SP có trong _DanhMucPK là tự điền tên và giá. Mã chưa có thì gõ tay.</span>
           <div id="ttSum" class="card flat" style="padding:10px 12px"></div><div id="ttWarn" style="display:flex;flex-direction:column;gap:4px"></div></div>
         <div class="card"><span class="sect">5 · Cuối trang</span>
-          <label class="field"><span class="lbl">Đính kèm</span><input id="tt_dk" class="inp" placeholder="VD: Bảng báo giá"></label>
-          <label class="field"><span class="lbl">Câu thêm trước lời kết</span><input id="tt_kt" class="inp" placeholder="Không bắt buộc"></label></div>
+          <label class="field" id="ttDkBox"><span class="lbl">Đính kèm</span><input id="tt_dk" class="inp" placeholder="VD: Bảng báo giá"></label>
+          <label class="field"><span class="lbl" id="ttL_kt">Câu thêm trước lời kết</span><textarea id="tt_kt" class="inp" style="min-height:46px" placeholder="Không bắt buộc"></textarea></label></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" id="ttSave">Lưu</button>
           <button class="btn" id="ttPrint">In · Lưu PDF</button>
@@ -317,7 +326,7 @@
   <div class="field"><span class="lbl">Tệp</span><div class="small" id="ttDlgFiles"></div></div>
   <label class="field"><span class="lbl">Đính kèm bản đã ký (ảnh / PDF) · tự chuyển Đã duyệt</span><input id="ttDlgFile" class="inp" type="file" accept="image/*,application/pdf"></label>
   <button class="btn pri block" id="ttDlgSave">Lưu thay đổi</button>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="ttDlgEdit">Mở để sửa</button><button class="btn sm" id="ttDlgCopy">Nhân bản thành giấy mới</button><button class="btn sm out" id="ttDlgXk">Tạo giấy đề nghị xuất kho</button></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" id="ttDlgEdit">Mở để sửa</button><button class="btn sm" id="ttDlgCopy">Nhân bản thành giấy mới</button><button class="btn sm out" id="ttDlgXk">Tạo giấy đề nghị xuất kho</button><button class="btn sm out" id="ttDlgDv">Tạo phiếu đặt hàng gửi P.DV</button></div>
   <span class="hint mono" id="ttDlgId"></span>
 </div></div>
 
@@ -343,7 +352,7 @@ $('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
 $('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
 // đủ 4 số là tự vào, không cần bấm nút
 $('#lgPin').addEventListener('input', () => { if (/^\d{4}$/.test($('#lgPin').value.trim()) && !$('#lgBtn').disabled) $('#lgBtn').click(); });
-appFoot('App Sale · Quản lý', '1.6.0', $('#appFoot'));
+appFoot('App Sale · Quản lý', '1.7.0', $('#appFoot'));
 $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
 
 function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); $('#tabs button[data-v="BaoHiem"]').click(); } // mở đầu ở Bảo hiểm; Cavet tải sẵn phía sau
@@ -852,6 +861,6 @@ $('#bnSave').onclick = () => {
 
 if (PIN) start(); else showLogin();
 </script>
-<script src="totrinh.js?v=1.6.0"></script>
+<script src="totrinh.js?v=1.7.0"></script>
 </body>
 </html>

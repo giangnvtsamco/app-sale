@@ -1,5 +1,6 @@
-/* Tab Tờ trình · trang Quản lý App Sale (v1.6)
- * Soạn tờ trình + giấy đề nghị xuất kho, xem trước khổ A4, lưu sổ, tạo file Word (Google Docs → tải .docx).
+/* Tab Tờ trình · trang Quản lý App Sale (v1.7)
+ * Soạn tờ trình + giấy đề nghị xuất kho + phiếu gửi Phòng Dịch vụ (đặt hàng PK, lắp đặt PK khuyến mãi),
+ * xem trước khổ A4, lưu sổ, tạo file Word (Google Docs → tải .docx), nạp danh mục PK từ Excel.
  * Dùng chung: PIN, call, $, $$, esc, toast, busy, openDlg, closeDlg, fileToBase64, shrinkImage (quanly.html + samco-core). */
 (() => {
   let T = null, CUR = null, SUB = 'soan', soF = 'all';
@@ -37,7 +38,9 @@
     xe: [['bs', 'Biển số', 96], ['hx', 'Hiệu xe', 90], ['nam', 'Năm SX', 52], ['gt', 'Giá trị BH', 104, 1], ['tnds', 'TNDS', 84, 1], ['vcx', 'VCX', 92, 1], ['etag', 'E-Tag', 76, 1]],
     cp: [['nd', 'Nội dung', 0], ['dvt', 'ĐVT', 56], ['sl', 'SL', 44, 1], ['gia', 'Đơn giá trước thuế', 100, 1], ['vat', 'Thuế %', 52, 1]],
     hh: [['ten', 'Tên hàng hóa', 0], ['dvt', 'ĐVT', 70], ['sl', 'Số lượng', 70, 1]],
-    ns: [['ten', 'Họ và tên', 0], ['cv', 'Chức vụ', 170]]
+    ns: [['ten', 'Họ và tên', 0], ['cv', 'Chức vụ', 170]],
+    dv: [['ma', 'Mã SP', 120], ['kho', 'Kho', 120], ['ten', 'Tên sản phẩm', 0], ['sl', 'SL', 44, 1], ['gia', 'Giá chưa VAT', 96, 1]],
+    kh: [['ten', 'Khách hàng', 0], ['lx', 'Loại xe', 110], ['sk', 'Số khung', 160], ['sdt', 'SĐT khách', 110], ['sale', 'Sale · SĐT', 170]]
   };
   const LOAI = {
     dathang: { cols: 'sp', cap: 'pgd', secs: true, xkOk: true,
@@ -60,15 +63,24 @@
       cc: 'Căn cứ thông báo và danh sách xác nhận từ phía đối tác VinFast về việc tổ chức Chương trình … dành cho các Đại lý Phân phối;',
       md: 'Nhằm tạo điều kiện cho cán bộ nhân viên giao lưu, học hỏi và gắn kết theo định hướng của VinFast, {nguoi} kính trình {cap} cho các nhân sự có tên trong danh sách sau tham dự chương trình:',
       kt: 'Thời gian: … Địa điểm: …' },
-    xuatkho: { cols: 'xk', cap: '', xk: true, vv: '', cc: '', md: '' }
+    xuatkho: { cols: 'xk', cap: '', xk: true, vv: '', cc: '', md: '' },
+    // phiếu gửi Phòng Dịch vụ (v1.7) · nhãn ô nhập riêng: f = { vv, cc, md, kt } (null = ẩn)
+    dhdv: { cols: 'dv', cap: '', dv: true, goc: true, vv: 'Đặt hàng phụ kiện', cc: 'Phòng bán hàng xe mới (chi phí nội bộ)', md: '', kt: 'Nhờ Phòng Dịch vụ đặt hàng giúp. Đính kèm tờ trình.',
+      f: { vv: 'Tên phiếu · ghi trong sổ, không in', cc: 'Chi phí trên được tính cho', md: null, kt: 'Ghi chú' } },
+    lapdat: { cols: 'kh', cap: '', dv: true, vv: 'Đặt hàng và lắp đặt … cho xe …',
+      md: 'Theo Chương trình ưu đãi tặng … dành cho khách hàng mua xe VinFast … tại showroom VinFast SAMCO Bình Tân. Phòng Bán hàng đề nghị Phòng Dịch vụ tiếp nhận thông tin, hỗ trợ đặt hàng và tiến hành lắp đặt … cho các khách hàng theo danh sách dưới đây:',
+      cc: 'Khách hàng thanh toán bằng E-Voucher (giá trị … VNĐ)', kt: '{phoiHop}',
+      f: { vv: 'V/v · in dưới tiêu đề', cc: '1. Hình thức thanh toán', md: 'Đoạn mở đầu', kt: '2. Đề nghị phối hợp' } }
   };
+  const F0 = { vv: 'Về việc', cc: 'Căn cứ riêng · mỗi dòng một căn cứ', md: 'Đoạn mở đầu · {nguoi} {cap} tự thay', kt: 'Câu thêm trước lời kết' };
+  const khongSo = loai => !!(LOAI[loai] && (LOAI[loai].xk || LOAI[loai].dv));
   const TT_CHIP = { 'Nháp': 'mute', 'Đã trình': 'warn', 'Đã duyệt': 'acc', 'Đã xuất kho': 'ok', 'Hủy': 'bad' };
-  const tinh = (cot, r) => cot === 'sp' || cot === 'xk' ? (r.sl || 0) * (r.gia || 0)
+  const tinh = (cot, r) => cot === 'sp' || cot === 'xk' || cot === 'dv' ? (r.sl || 0) * (r.gia || 0)
     : cot === 'cp' ? Math.round((r.sl || 0) * (r.gia || 0) * (1 + (r.vat || 0) / 100))
     : cot === 'xe' ? (r.tnds || 0) + (r.vcx || 0) + (r.etag || 0) : 0;
   const capOf = ma => T.cap.find(c => c.ma === ma) || T.cap[0] || { ten: '', kg: '', cc: [], ky: [], nguoi: '', so: 'TTr-KD', dv: '' };
   const capTen = c => String(c.ten || '').replace(/\s*\(.*\)\s*$/, '');
-  const soHieu = r => r.loai === 'xuatkho' ? '' : (r.so ? r.so + '/' + capOf(r.cap).so : '');
+  const soHieu = r => khongSo(r.loai) ? '' : (r.so ? r.so + '/' + capOf(r.cap).so : '');
 
   /* ---------- Tải dữ liệu ---------- */
   async function ttLoad() {
@@ -104,22 +116,29 @@
   /* ---------- Soạn ---------- */
   function blank(loai) {
     const L = LOAI[loai];
-    CUR = { id: null, loai, cap: L.cap || '', so: '', ngay: '', vv: L.vv, cc: L.cc || '', md: L.md || '', dk: L.dk || '', kt: L.kt || '', goc: '', tt: 'Nháp', word: '', ky: '',
+    CUR = { id: null, loai, cap: L.cap || '', so: '', ngay: '', vv: L.vv, cc: L.cc || '', md: L.md || '', dk: L.dk || '', kt: (L.kt || '').replace('{phoiHop}', (T.pdv || {}).phoiHop || ''), goc: '', tt: 'Nháp', word: '', ky: '',
       data: [{ sec: '', rows: [{}] }] };
-    if (L.xk) { const d = new Date(), z = n => String(n).padStart(2, '0'); CUR.ngay = d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+    if (L.xk || L.dv) { const d = new Date(), z = n => String(n).padStart(2, '0'); CUR.ngay = d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
   }
   function drawForm() {
-    const L = LOAI[CUR.loai], xk = !!L.xk;
+    const L = LOAI[CUR.loai], xk = !!L.xk, dv = !!L.dv, F = L.f || F0;
     $$('#ttTypes .pill').forEach(p => { p.classList.toggle('on', p.dataset.l === CUR.loai); p.disabled = !!CUR.id && p.dataset.l !== CUR.loai; });
     $('#ttState').innerHTML = CUR.id
       ? `<span class="chip ${TT_CHIP[CUR.tt] || 'mute'}">${esc(CUR.tt)}</span> <span class="mono small">${esc(CUR.id)}</span>${CUR.word ? ` · <a href="${docUrl(CUR.word)}" target="_blank" rel="noopener">Mở Google Docs ↗</a> · <a href="${docxUrl(CUR.word)}" target="_blank" rel="noopener">Tải Word (.docx)</a>` : ''}`
       : '<span class="chip mute">Giấy mới · chưa lưu</span>';
-    $('#ttCapBox').hidden = xk; $('#ttGocBox').hidden = !xk;
-    $('#ttCcBox').hidden = xk; $('#ttMdBox').hidden = xk; $('#ttSoBox').hidden = xk;
-    $('#ttCap').value = CUR.cap; $('#ttCapNote').textContent = xk ? '' : capOf(CUR.cap).note || '';
-    if (xk) {
-      const ds = T.list.filter(r => LOAI[r.loai] && LOAI[r.loai].xkOk && r.tt !== 'Hủy');
-      $('#ttGoc').innerHTML = '<option value="">— Chọn tờ trình đã duyệt —</option>' + ds.map(r => `<option value="${esc(r.id)}"${r.id === CUR.goc ? ' selected' : ''}>${esc(soHieu(r) || r.id)} · ${esc(String(r.vv).replace(/^Về việc\s*/i, ''))}</option>`).join('');
+    $('#ttCapBox').hidden = xk || dv; $('#ttGocBox').hidden = !(xk || L.goc);
+    $('#ttCcBox').hidden = xk || F.cc === null; $('#ttMdBox').hidden = xk || F.md === null; $('#ttSoBox').hidden = xk || dv;
+    $('#ttDkBox').hidden = dv; $('#ttXeBox').hidden = CUR.loai !== 'lapdat';
+    // phiếu P.DV: ô "chi phí tính cho" / "hình thức thanh toán" in sau bảng → đưa xuống mục 5 cho đúng thứ tự
+    if (dv) $('#ttL_kt').closest('.field').before($('#ttCcBox')); else $('#ttMdBox').before($('#ttCcBox'));
+    $('#ttTblHint').textContent = CUR.loai === 'lapdat' ? 'Tìm xe ở ô trên để điền sẵn, hoặc gõ tay vào bảng.' : 'Gõ mã SP có trong _DanhMucPK là tự điền tên, giá' + (CUR.loai === 'dhdv' ? ', kho' : '') + '. Mã chưa có thì gõ tay.';
+    ['vv', 'cc', 'md', 'kt'].forEach(k => { if (F[k]) $('#ttL_' + k).textContent = F[k]; });
+    $('#ttGocH').textContent = L.goc ? '2 · Căn cứ tờ trình (không bắt buộc)' : '2 · Căn cứ tờ trình';
+    $('#ttGocHint').textContent = L.goc ? 'Chọn tờ trình đặt hàng: app chép danh sách phụ kiện. Đặt lẻ thì bỏ qua, gõ mã SP ở bảng.' : 'Chọn tờ trình đã duyệt: app chép danh mục sản phẩm và câu căn cứ.';
+    $('#ttCap').value = CUR.cap; $('#ttCapNote').textContent = xk || dv ? '' : capOf(CUR.cap).note || '';
+    if (xk || L.goc) {
+      const ds = T.list.filter(r => (L.goc ? r.loai === 'dathang' : LOAI[r.loai] && LOAI[r.loai].xkOk) && r.tt !== 'Hủy');
+      $('#ttGoc').innerHTML = '<option value="">' + (L.goc ? '— Không căn cứ tờ trình —' : '— Chọn tờ trình đã duyệt —') + '</option>' + ds.map(r => `<option value="${esc(r.id)}"${r.id === CUR.goc ? ' selected' : ''}>${esc(soHieu(r) || r.id)} · ${esc(String(r.vv).replace(/^Về việc\s*/i, ''))}</option>`).join('');
     }
     ['vv', 'cc', 'md', 'so', 'dk', 'kt'].forEach(k => { $('#tt_' + k).value = CUR[k] || ''; });
     $('#tt_ngay').value = CUR.ngay || '';
@@ -152,7 +171,7 @@
     else r[C[0]] = t.value;
     if (t.dataset.k === 'ma') {
       const p = T.dm.find(x => x.ma.toUpperCase() === t.value.trim().toUpperCase());
-      if (p) { r.ma = p.ma; r.ten = p.ten; r.gia = p.gia; r.sl = r.sl || 1; if (CUR.loai === 'xuatkho') r.kho = r.kho || p.kho; return drawTable(); }
+      if (p) { r.ma = p.ma; r.ten = p.ten; r.gia = p.gia; r.sl = r.sl || 1; if (CUR.loai === 'xuatkho') r.kho = r.kho || p.kho; if (CUR.loai === 'dhdv') r.kho = r.kho || p.vt || 'Kho PK 4036/1000'; return drawTable(); }
     }
     preview();
   });
@@ -175,10 +194,19 @@
   /** Giấy xuất kho từ tờ trình đã duyệt: chép danh mục sản phẩm, câu căn cứ */
   async function loadGoc(id) {
     CUR.goc = id;
-    if (!id) { CUR.vv = ''; CUR.data = [{ sec: '', rows: [{}] }]; return drawForm(); }
+    if (!id) { CUR.vv = LOAI[CUR.loai].goc ? LOAI[CUR.loai].vv : ''; CUR.data = [{ sec: '', rows: [{}] }]; return drawForm(); }
     try {
       const g = await call('ttGet', PIN, id);
       const r = T.list.find(x => x.id === id) || g;
+      if (CUR.loai === 'dhdv') { // phiếu đặt hàng gửi P.DV: chép phụ kiện của tờ trình
+        CUR.vv = 'Đặt hàng phụ kiện theo Tờ trình ' + (soHieu(r) || r.id);
+        CUR.data = [{ sec: '', rows: [].concat(...(g.data || []).map(s => s.rows)).filter(x => x.ma || x.ten).map(x => {
+          const p = T.dm.find(d => d.ma === x.ma);
+          return { ma: x.ma || '', kho: p && p.vt ? p.vt : 'Kho PK 4036/1000', ten: x.ten || '', sl: x.sl || 0, gia: x.gia || 0 };
+        }) }];
+        if (!CUR.data[0].rows.length) CUR.data[0].rows.push({});
+        return drawForm();
+      }
       const vv = String(g.vv || '').replace(/^Về việc\s*/i, '');
       CUR.vv = 'Căn cứ vào Tờ trình Số ' + (soHieu(r) || '……/' + capOf(g.cap).so) + ' Về việc ' + vv.charAt(0).toLowerCase() + vv.slice(1) +
         (g.ngay ? ', ngày ' + g.ngay : '') + ' của ' + (capOf(g.cap).dv || 'PHÒNG KINH DOANH') + '.';
@@ -205,7 +233,54 @@
     const d = v ? v.split('-') : null;
     return d ? `ngày ${+d[2]} tháng ${String(d[1]).padStart(2, '0')} năm ${d[0]}` : `ngày&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tháng&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;năm ${new Date().getFullYear()}`;
   }
+  /* Phiếu gửi Phòng Dịch vụ: đúng mẫu "Dịch vụ_Lệnh sửa chữa" (trang 4: đặt hàng PK · trang 5: lắp đặt PK khuyến mãi) */
+  function a4Dv() {
+    const L = LOAI[CUR.loai], W = [], f12 = 'font-size:12pt;line-height:1.35;margin:3pt 0;text-align:justify';
+    const td = `style="${S.td};text-align:center;vertical-align:middle"`, tdl = `style="${S.td};vertical-align:middle"`;
+    let h = `<table style="border-collapse:collapse"><tr><td style="text-align:center;font-size:10.5pt;font-weight:bold;line-height:1.3;padding:0">NHÀ MÁY Ô TÔ THƯƠNG MẠI SAMCO<br>VINFAST – SAMCO BÌNH TÂN</td></tr>
+      <tr><td style="text-align:center;font-size:10.5pt;padding:8pt 0 0"><u>PHÒNG BÁN HÀNG</u></td></tr></table>`;
+    const rows = CUR.data[0].rows.filter(r => Object.keys(r).some(k => r[k] !== '' && r[k] !== 0 && r[k] != null));
+    let G = 0;
+    if (CUR.loai === 'dhdv') {
+      h += `<p style="text-align:center;font-size:14pt;font-weight:bold;margin:12pt 0 4pt">PHIẾU ĐỀ NGHỊ DỊCH VỤ ĐẶT HÀNG PHỤ KIỆN</p>`;
+      h += `<p style="${f12}"><b><u>Kính gửi:</u> - Phòng Dịch vụ VINFAST SAMCO BÌNH TÂN</b></p><p style="${f12}">Phòng bán hàng đề nghị được hỗ trợ phần dịch vụ đặt những phụ kiện sau:</p>`;
+      h += `<table style="width:100%;border-collapse:collapse;margin:4pt 0"><tr>${['Mã SP', 'Kho', 'Tên sản phẩm', 'Số lượng', 'Giá chưa VAT'].map(x => `<th style="${S.th}">${x}</th>`).join('')}</tr>`;
+      rows.forEach(r => {
+        const t = tinh('dv', r); G += t;
+        h += `<tr><td ${td}>${esc(r.ma || '')}</td><td ${td}>${esc(r.kho || '')}</td><td ${td}>${esc(r.ten || '')}</td><td ${td}>${r.sl || ''}</td><td ${td}>${fm(r.gia)}</td></tr>`;
+        const p = T.dm.find(x => x.ma === r.ma); if (p && r.gia && p.gia !== r.gia) W.push(`${r.ma} ${r.ten || ''}: đang ghi ${fm(r.gia)}, danh mục ${fm(p.gia)}.`);
+        if ((r.sl || 0) > 1) W.push(`${r.ma || r.ten}: SL ${r.sl} · Giá chưa VAT in theo đơn giá, tổng cộng tính SL × giá.`);
+      });
+      if (!rows.length) h += `<tr><td colspan="5" ${td}>&nbsp;</td></tr>`;
+      if (rows.length > 1) h += `<tr><td colspan="4" style="${S.td};text-align:center;font-weight:bold">TỔNG CỘNG (CHƯA VAT)</td><td ${td.replace('center', 'center;font-weight:bold')}>${fm(G)}</td></tr>`;
+      h += '</table>';
+      h += `<p style="${f12};margin-top:10pt"><b>Chi phí trên được tính cho:</b> ${esc(CUR.cc)}</p>`;
+      if (CUR.kt) h += `<p style="${f12}">Ghi chú: ${esc(CUR.kt)}</p>`;
+    } else {
+      h += `<p style="text-align:center;font-size:14pt;font-weight:bold;margin:12pt 0 2pt">PHIẾU ĐỀ NGHỊ DỊCH VỤ</p>`;
+      if (CUR.vv) h += `<p style="text-align:center;font-size:13pt;font-style:italic;margin:0 0 6pt">(V/v: ${esc(String(CUR.vv).replace(/^\(?\s*V\/v:?\s*/i, '').replace(/\)\s*$/, ''))})</p>`;
+      h += `<p style="${f12}"><b><u>Kính gửi:</u> Phòng Dịch vụ VINFAST SAMCO BÌNH TÂN</b></p>`;
+      if (CUR.md) h += `<p style="${f12};text-indent:1.27cm">${esc(CUR.md)}</p>`;
+      h += `<table style="width:100%;border-collapse:collapse;margin:4pt 0"><tr>${['STT', 'Khách hàng', 'Loại xe', 'Số Khung', 'SĐT', 'Sale'].map(x => `<th style="${S.th}">${x}</th>`).join('')}</tr>`;
+      rows.forEach((r, i) => {
+        h += `<tr><td ${td}>${i + 1}</td><td ${td}>${esc(String(r.ten || '').toUpperCase())}</td><td ${td}>${esc(r.lx || '')}</td><td ${td}>${esc(r.sk || '')}</td><td ${td}>${esc(r.sdt || '')}</td><td ${td}>${esc(r.sale || '').replace(/\s*·\s*/g, '<br>')}</td></tr>`;
+        if (!r.sk) W.push(`Dòng ${i + 1}: chưa có số khung.`);
+      });
+      if (!rows.length) h += `<tr><td colspan="6" ${td}>&nbsp;</td></tr>`;
+      h += '</table>';
+      if (CUR.cc) h += `<p style="${f12};margin-top:10pt"><b>1. Hình thức thanh toán:</b> ${esc(CUR.cc)}</p>`;
+      if (CUR.kt) h += `<p style="${f12}"><b>2. Đề nghị phối hợp:</b> ${esc(CUR.kt)}</p>`;
+      h += `<p style="${f12};margin-top:8pt">Trân trọng cảm ơn sự hỗ trợ của Phòng Dịch vụ!</p>`;
+      if (/…/.test(CUR.vv + CUR.md + CUR.cc + CUR.kt)) W.push('Còn chỗ "…" chưa điền (tên phụ kiện, dòng xe, giá trị E-Voucher, hạn hoàn thành).');
+    }
+    const d = CUR.ngay ? CUR.ngay.split('-') : null;
+    h += `<p style="text-align:right;font-style:italic;font-size:11pt;margin:10pt 0 0">TP.HCM, ${d ? `ngày ${+d[2]} tháng ${+d[1]} năm ${d[0]}` : 'ngày … tháng … năm ' + new Date().getFullYear()}</p>`;
+    h += `<table style="width:100%;border-collapse:collapse;margin-top:2pt"><tr>${[['Xác nhận P.Dịch Vụ', 1], ['Xác nhận P.Bán Hàng', 0], ['Nhân viên đề nghị', 0]].map(k => `<td style="text-align:center;vertical-align:top;font-size:12pt;${k[1] ? 'font-weight:bold;' : ''}padding:0 2pt;width:33%">${k[0]}</td>`).join('')}</tr></table>` +
+      '<p style="margin:0;line-height:1">&nbsp;</p>'.repeat(5);
+    return { html: h, tong: G, tien: CUR.loai === 'dhdv', warn: W };
+  }
   function a4() {
+    if (LOAI[CUR.loai].dv) return a4Dv();
     const L = LOAI[CUR.loai], xk = !!L.xk, c = capOf(CUR.cap), cot = L.cols, W = [];
     const tct = xk || !c.dv;
     const left = (tct ? 'TỔNG CÔNG TY<br><span style="white-space:nowrap">CƠ KHÍ GIAO THÔNG VẬN TẢI SÀI GÒN</span><br>TNHH MỘT THÀNH VIÊN<br>(SAMCO)<br>' : '') +
@@ -322,13 +397,14 @@
     const con = id => T.list.filter(x => x.goc === id && x.tt !== 'Hủy');
     $('#ttSoBody').innerHTML = list.length ? list.map(r => {
       const xk = con(r.id);
+      const dvs = T.list.filter(x => x.goc === r.id && x.loai === 'dhdv' && x.tt !== 'Hủy');
       return `<tr data-id="${esc(r.id)}" style="cursor:pointer">
-        <td><b class="mono">${esc(soHieu(r) || (r.loai === 'xuatkho' ? 'Xuất kho' : '—'))}</b><span class="sub2">${esc(r.ngay || 'chưa có ngày')}</span></td>
+        <td><b class="mono">${esc(soHieu(r) || (r.loai === 'xuatkho' ? 'Xuất kho' : LOAI[r.loai] && LOAI[r.loai].dv ? 'Phiếu P.DV' : '—'))}</b><span class="sub2">${esc(r.ngay || 'chưa có ngày')}</span></td>
         <td>${esc(T.loai[r.loai] || r.loai)}${r.goc ? `<span class="sub2">Căn cứ ${esc(soHieu(T.list.find(x => x.id === r.goc) || {}) || r.goc)}</span>` : ''}</td>
         <td style="max-width:360px">${esc(String(r.vv).replace(/^Về việc\s*/i, ''))}</td>
-        <td>${r.loai === 'xuatkho' ? '—' : esc(capTen(capOf(r.cap)))}</td>
+        <td>${r.loai === 'xuatkho' ? '—' : LOAI[r.loai] && LOAI[r.loai].dv ? 'P.Dịch vụ' : esc(capTen(capOf(r.cap)))}</td>
         <td class="mono" style="text-align:right">${r.tong ? fm(r.tong) : '—'}</td>
-        <td><span class="chip ${TT_CHIP[r.tt] || 'mute'}">${esc(r.tt)}</span>${xk.length ? `<span class="sub2">Đã có giấy xuất kho</span>` : ''}</td>
+        <td><span class="chip ${TT_CHIP[r.tt] || 'mute'}">${esc(r.tt)}</span>${xk.some(x => x.loai === 'xuatkho') ? `<span class="sub2">Đã có giấy xuất kho</span>` : ''}${dvs.length ? `<span class="sub2">Đã có phiếu đặt hàng P.DV</span>` : ''}</td>
         <td class="small">${r.word ? 'Word' : ''}${r.word && r.ky ? ' · ' : ''}${r.ky ? 'Bản ký' : ''}</td>
       </tr>`;
     }).join('') : '<tr><td colspan="7"><div class="empty">Chưa có tờ trình.</div></td></tr>';
@@ -341,11 +417,12 @@
   let ROW = null;
   function openRow(id) {
     ROW = T.list.find(r => r.id === id); if (!ROW) return;
-    const xkOk = LOAI[ROW.loai] && LOAI[ROW.loai].xkOk && ['Đã duyệt', 'Đã trình', 'Nháp'].includes(ROW.tt) && !T.list.some(x => x.goc === id && x.tt !== 'Hủy');
+    const xkOk = LOAI[ROW.loai] && LOAI[ROW.loai].xkOk && ['Đã duyệt', 'Đã trình', 'Nháp'].includes(ROW.tt) && !T.list.some(x => x.goc === id && x.loai === 'xuatkho' && x.tt !== 'Hủy');
+    $('#ttDlgDv').hidden = !(ROW.loai === 'dathang' && ROW.tt !== 'Hủy');
     $('#ttDlgT').textContent = T.loai[ROW.loai] || ROW.loai;
     $('#ttDlgV').textContent = ROW.vv;
-    $('#ttDlgSo').value = ROW.so; $('#ttDlgSoHieu').textContent = ROW.loai === 'xuatkho' ? '' : '/' + capOf(ROW.cap).so;
-    $('#ttDlgSoBox').hidden = ROW.loai === 'xuatkho';
+    $('#ttDlgSo').value = ROW.so; $('#ttDlgSoHieu').textContent = khongSo(ROW.loai) ? '' : '/' + capOf(ROW.cap).so;
+    $('#ttDlgSoBox').hidden = khongSo(ROW.loai);
     $('#ttDlgNgay').value = iso(ROW.ngay);
     $('#ttDlgTt').innerHTML = T.trangThai.filter(s => s !== 'Đã xuất kho' || (LOAI[ROW.loai] || {}).xkOk).map(s => `<button class="pill${s === ROW.tt ? ' on' : ''}" type="button" data-v="${esc(s)}">${esc(s)}</button>`).join('');
     $('#ttDlgFiles').innerHTML = [ROW.word ? `<a href="${docUrl(ROW.word)}" target="_blank" rel="noopener">Mở Google Docs ↗</a>` : '', ROW.word ? `<a href="${docxUrl(ROW.word)}" target="_blank" rel="noopener">Tải Word (.docx)</a>` : '',
@@ -381,6 +458,75 @@
   }
   $('#ttDlgEdit').onclick = () => busy($('#ttDlgEdit'), '', async () => { try { await openEdit(ROW.id, false); } catch (e) { toast(e, 1); } });
   $('#ttDlgCopy').onclick = () => busy($('#ttDlgCopy'), '', async () => { try { await openEdit(ROW.id, true); } catch (e) { toast(e, 1); } });
+  $('#ttDlgDv').onclick = () => busy($('#ttDlgDv'), '', async () => {
+    try { const id = ROW.id; blank('dhdv'); closeDlg('ttDlg'); SUB = 'soan'; await loadGoc(id); drawAll(); toast('Đã chép phụ kiện từ tờ trình · kiểm tra rồi bấm Lưu'); } catch (e) { toast(e, 1); }
+  });
+
+  /* ---------- Phiếu lắp đặt PK khuyến mãi: tìm xe khách trong sheet XE ---------- */
+  let xeT = 0, XE = [];
+  $('#ttXeQ').addEventListener('input', () => {
+    clearTimeout(xeT);
+    const q = $('#ttXeQ').value.trim();
+    if (q.length < 3) { $('#ttXeKq').innerHTML = ''; return; }
+    xeT = setTimeout(async () => {
+      try {
+        XE = await call('ttTimXe', PIN, q);
+        if ($('#ttXeQ').value.trim() !== q) return;
+        $('#ttXeKq').innerHTML = XE.length ? XE.map((x, i) => `<button class="tt-xe" type="button" data-i="${i}"><b>${esc(x.ten || '—')}</b><span class="small muted">${esc(x.lx)} · <span class="mono">${esc(x.sk)}</span>${x.sale ? ' · ' + esc(x.sale.split(' · ')[0]) : ''}</span></button>`).join('')
+          : '<span class="small muted">Không tìm thấy xe. Gõ tay vào bảng.</span>';
+      } catch (e) { toast(e, 1); }
+    }, 300);
+  });
+  $('#ttXeKq').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const x = XE[+b.dataset.i], rows = CUR.data[0].rows;
+    if (rows.some(r => r.sk && r.sk === x.sk)) return toast('Xe này đã có trong bảng.', 1);
+    const row = { ten: x.ten, lx: x.lx, sk: x.sk, sdt: x.sdt, sale: x.sale };
+    const last = rows[rows.length - 1];
+    if (last && !Object.keys(last).some(k => last[k])) rows[rows.length - 1] = row; else rows.push(row);
+    $('#ttXeQ').value = ''; $('#ttXeKq').innerHTML = ''; drawTable();
+    toast('Đã thêm ' + (x.ten || x.sk));
+  });
+
+  /* ---------- Nạp danh mục phụ kiện từ Excel (sheet DMSP PK) ---------- */
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; s.onload = ok; s.onerror = () => no('Không tải được bộ đọc Excel. Vui lòng thử lại.'); document.head.appendChild(s); });
+  }
+  /** Tìm sheet có cột Mã SP + Tên sản phẩm + Giá bán buôn (ưu tiên sheet tên "DMSP PK") → [{ma, ten, gia, vt, model}] */
+  function docDm(wb) {
+    const nk = s => String(s == null ? '' : s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+    const names = wb.SheetNames.slice().sort((a, b) => (nk(b) === 'dmsp pk') - (nk(a) === 'dmsp pk'));
+    for (const n of names) {
+      const a = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' });
+      for (let i = 0; i < Math.min(a.length, 10); i++) {
+        const h = a[i].map(nk), c = k => h.findIndex(x => x.indexOf(k) === 0);
+        const iMa = c('mã sp'), iTen = c('tên sản phẩm'), iGia = c('giá bán buôn');
+        if (iMa < 0 || iTen < 0 || iGia < 0) continue;
+        const iVt = c('vị trí kho'), iMd = c('model');
+        return { sheet: n, rows: a.slice(i + 1).map(r => ({ ma: String(r[iMa]).trim(), ten: String(r[iTen]).trim(), gia: Math.round(Number(r[iGia]) || 0),
+          vt: iVt >= 0 ? String(r[iVt]).trim() : '', model: iMd >= 0 ? String(r[iMd]).trim() : '' })).filter(r => /^[A-Za-z0-9-]{5,}$/.test(r.ma) && r.ten) };
+      }
+    }
+    return null;
+  }
+  $('#ttDmFile').onchange = e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    busy($('#ttDmBtn'), 'Đang nạp', async () => {
+      try {
+        await loadXlsx();
+        const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+        const d = docDm(wb);
+        if (!d || !d.rows.length) return toast('Không thấy sheet có cột Mã SP, Tên sản phẩm, Giá bán buôn.', 1);
+        if (!confirm(`Nạp ${d.rows.length} phụ kiện từ sheet "${d.sheet}" vào danh mục?\nMã đã có: cập nhật tên, giá. Mã mới: thêm vào.`)) return;
+        const r = await call('ttDmImport', PIN, d.rows);
+        T.dm = r.dm; fillStatic(); drawForm();
+        toast(`Đã nạp danh mục: thêm ${r.them}, cập nhật ${r.sua} phụ kiện`);
+      } catch (err) { toast(err, 1); }
+    });
+  };
+  $('#ttDmBtn').onclick = () => $('#ttDmFile').click();
+
   $('#ttDlgXk').onclick = () => busy($('#ttDlgXk'), '', async () => {
     try { const id = ROW.id; blank('xuatkho'); closeDlg('ttDlg'); SUB = 'soan'; await loadGoc(id); drawAll(); toast('Đã chép danh mục từ tờ trình · kiểm tra rồi bấm Lưu'); } catch (e) { toast(e, 1); }
   });
