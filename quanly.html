@@ -203,11 +203,14 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <span style="display:flex;flex-direction:column;gap:2px"><span class="sect">Hằng tháng · file Excel chị Trâm gửi</span>
-        <span class="hint">Khớp theo số khung → bổ sung SĐT khách (dùng gọi tái tục). Không ghi đè số đã có.</span></span>
-      <label class="btn out" for="xlsIn">Tải file Excel</label>
-      <input id="xlsIn" type="file" accept=".xlsx,.xls,.csv" hidden>
+    <div class="card step" id="xlsCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="display:flex;flex-direction:column;gap:2px"><span class="sect">File Excel chị Trâm · nguồn đầy đủ</span>
+          <span class="hint">Thêm xe chưa có trong app. Xe đã có: chỉ bổ sung SĐT, giá khi còn trống.</span></span>
+        <label class="btn out" for="xlsIn">Tải file Excel</label>
+        <input id="xlsIn" type="file" accept=".xlsx,.xls" hidden>
+      </div>
+      <div id="xlsOut" class="step" hidden></div>
     </div>
 
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -352,7 +355,7 @@ $('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
 $('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
 // đủ 4 số là tự vào, không cần bấm nút
 $('#lgPin').addEventListener('input', () => { if (/^\d{4}$/.test($('#lgPin').value.trim()) && !$('#lgBtn').disabled) $('#lgBtn').click(); });
-appFoot('App Sale · Quản lý', '1.7.0', $('#appFoot'));
+appFoot('App Sale · Quản lý', '1.8.0', $('#appFoot'));
 $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
 
 function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); $('#tabs button[data-v="BaoHiem"]').click(); } // mở đầu ở Bảo hiểm; Cavet tải sẵn phía sau
@@ -558,26 +561,96 @@ $('#btnSave').onclick = () => {
   });
 };
 
-/* ---------- File Excel chị Trâm → SĐT ---------- */
+/* ---------- File Excel chị Trâm (nguồn đầy đủ) · v1.8 ----------
+ * Đọc mọi sheet, tự nhận dòng tiêu đề (có "Số khung"), kể cả tiêu đề lặp lại theo từng tháng.
+ * Chỉ lấy: số khung, khách, loại xe, màu ngoại thất, NVBH, giá bán xe, số hợp đồng, ngày hóa đơn, SĐT.
+ * Không đọc CCCD/MST, địa chỉ, email, ngày sinh. */
+let XL = null, xlRows = [], xlChon = {}, xlAll = false;
+function xlCols(h) {
+  const f = t => h.findIndex(t);
+  const mauCoc = f(c => c.startsWith('mau ngoai that') && c.includes('coc'));
+  return {
+    vin: f(c => c.includes('so khung')), kh: f(c => c === 'khach hang'), loai: f(c => c === 'loai xe'),
+    mau: mauCoc >= 0 ? mauCoc : f(c => c.startsWith('mau ngoai that')), nvbh: f(c => c === 'nvbh'),
+    gia: f(c => c === 'gia ban xe'), hopDong: f(c => c === 'so hop dong'), ngay: f(c => c === 'ngay hoa don'),
+    sdt: f(c => c === 'sdt' || c.startsWith('so dien thoai'))
+  };
+}
+function xlDate(v) {
+  if (v instanceof Date) { const d = new Date(v.getTime() + 12 * 3600e3); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
+  const m = String(v || '').trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  return m ? m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0') + '/' + m[3] : '';
+}
+function xlRead(wb) {
+  const out = [];
+  wb.SheetNames.forEach(n => {
+    const a = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' });
+    let c = null;
+    a.forEach(r => {
+      const h = r.map(x => norm(x));
+      if (h.some(x => x.includes('so khung'))) { c = xlCols(h); return; } // dòng tiêu đề (lặp theo tháng)
+      if (!c || c.vin < 0 || !r[c.vin]) return;
+      const g = k => (c[k] >= 0 ? r[c[k]] : '');
+      out.push({ vin: String(g('vin')).trim(), kh: String(g('kh')).trim(), loai: String(g('loai')).trim(), mau: String(g('mau')).trim(),
+        nvbh: String(g('nvbh')).trim(), gia: Number(String(g('gia')).replace(/[^\d]/g, '')) || '', hopDong: String(g('hopDong')).trim(),
+        ngay: xlDate(g('ngay')), sdt: String(g('sdt')).trim() });
+    });
+  });
+  return out;
+}
 $('#xlsIn').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   if (!window.XLSX) return toast('Đang tải bộ đọc Excel, vui lòng thử lại.', 1);
+  $('#xlsOut').hidden = false; $('#xlsOut').innerHTML = '<div class="loading"><span class="spin"></span>Đang đọc ' + esc(f.name) + '…</div>';
   try {
-    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
-    const pairs = [];
-    wb.SheetNames.forEach(n => {
-      const a = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '' });
-      const hi = a.findIndex(r => r.some(c => /khung/.test(norm(c))) && r.some(c => /^(sdt|so dien thoai|dien thoai)/.test(norm(c))));
-      if (hi < 0) return;
-      const h = a[hi].map(norm);
-      const cv = h.findIndex(c => /khung/.test(c)), cs = h.findIndex(c => /^(sdt|so dien thoai|dien thoai)/.test(c));
-      a.slice(hi + 1).forEach(r => { if (r[cv] && r[cs]) pairs.push({ vin: String(r[cv]).trim(), sdt: String(r[cs]).trim() }); });
-    });
-    if (!pairs.length) return toast('Không thấy cột Số khung và SĐT trong file.', 1);
-    const r = await call('importPhones', PIN, pairs);
-    toast('Đã thêm ' + r.filled + ' SĐT · ' + r.had + ' xe đã có số · ' + r.notFound + ' xe chưa có trong app');
-  } catch (err) { toast(String(err), 1); }
+    xlRows = xlRead(XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true }));
+    if (!xlRows.length) { $('#xlsOut').hidden = true; return toast('Không thấy cột Số khung trong file.', 1); }
+    XL = await call('excelPreview', PIN, xlRows); XL.file = f.name; xlChon = {}; xlAll = false;
+    renderXl();
+  } catch (err) { $('#xlsOut').hidden = true; toast(String(err), 1); }
 };
+function xlSale(x) { return xlChon[x.vin] || x.sale; }
+function renderXl() {
+  const m = XL.moi, thieu = m.filter(x => !xlSale(x)), xong = m.filter(x => x.xong).length;
+  const nS = XL.bosung.filter(b => b.sdt).length, nG = XL.bosung.filter(b => b.gia).length;
+  const ds = xlAll ? m : thieu;
+  const all = (D.staffAll || []).slice().sort((a, b) => (b.dangLam - a.dangLam));
+  const opt = x => '<option value="">— Chọn —</option>' + all.map(s => `<option value="${esc(s.ten)}"${s.ten === xlSale(x) ? ' selected' : ''}${x.amb && x.amb.includes(s.ten) ? ' style="font-weight:700"' : ''}>${esc(s.ten)}${s.dangLam ? '' : ' (đã nghỉ)'}</option>`).join('');
+  $('#xlsOut').innerHTML = `
+    <div class="hint">${esc(XL.file)} · ${xlRows.length} dòng · thêm xe có ngày HĐ từ ${esc(XL.tu)}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="chip acc">${m.length} xe mới</span>
+      <span class="chip ok">${xong} xe cavet đã xong (HĐ trước ${esc(XL.xongTruoc)})</span>
+      <span class="chip ok">Bổ sung ${nS} SĐT · ${nG} giá</span>
+      ${thieu.length ? `<span class="chip warn">${thieu.length} xe cần chọn sale</span>` : ''}
+      <span class="chip mute">Bỏ qua: ${XL.bo.truocMoc} trước mốc · ${XL.bo.khongDoi} không có gì mới${XL.bo.loi ? ' · ' + XL.bo.loi + ' lỗi' : ''}</span>
+    </div>
+    ${m.length ? `<div style="display:flex;gap:8px;align-items:center"><span class="sect">${xlAll ? 'Tất cả xe mới' : 'Xe cần chọn sale'}</span>
+      <button class="btn sm out" id="xlToggle" style="margin-left:auto">${xlAll ? 'Chỉ xe cần chọn sale' : 'Xem tất cả ' + m.length + ' xe mới'}</button></div>
+    ${ds.length ? `<div class="tbl-wrap" style="max-height:420px;overflow:auto"><table class="tbl rv"><thead><tr><th>Ngày HĐ</th><th>Khách hàng</th><th>Số khung</th><th>Loại xe</th><th>Giá (VAT)</th><th>NVBH trong file</th><th>Sale</th><th>Cavet</th></tr></thead><tbody>
+      ${ds.map(x => `<tr><td class="mono">${esc(x.ngay)}</td><td>${esc(x.kh)}</td><td class="mono small">${esc(x.vin)}</td><td>${esc(x.loai)}</td>
+        <td class="mono" style="text-align:right">${x.gia ? num(x.gia) : '<span class="muted">—</span>'}</td><td>${esc(x.nvbh) || '<span class="muted">—</span>'}</td>
+        <td><select class="inp" data-xv="${esc(x.vin)}" style="min-width:170px">${opt(x)}</select></td>
+        <td><span class="chip ${x.xong ? 'ok' : 'acc'}">${x.xong ? 'Đã xong' : 'Theo dõi'}</span></td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="empty">Tất cả xe mới đã khớp sale.</div>'}` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="hint">${thieu.length ? 'Xe chưa chọn sale sẽ chưa được thêm.' : 'Không ghi đè dữ liệu đã có.'}</span>
+      <span style="display:flex;gap:8px"><button class="btn sm" id="xlClose">Đóng</button>
+      <button class="btn pri" id="xlSave" ${(m.length - thieu.length) + XL.bosung.length ? '' : 'disabled'} style="min-width:200px;letter-spacing:.1em;font-weight:800">LƯU · THÊM ${m.length - thieu.length} XE · BỔ SUNG ${XL.bosung.length}</button></span>
+    </div>`;
+}
+$('#xlsOut').addEventListener('change', e => { const s = e.target.closest('[data-xv]'); if (!s) return; xlChon[s.dataset.xv] = s.value; if (!xlAll) setTimeout(renderXl, 250); else renderXl(); });
+$('#xlsOut').addEventListener('click', e => {
+  if (e.target.id === 'xlToggle') { xlAll = !xlAll; renderXl(); }
+  if (e.target.id === 'xlClose') { XL = null; $('#xlsOut').hidden = true; }
+  if (e.target.id === 'xlSave') busy(e.target, 'Đang lưu', async () => {
+    try {
+      const r = await call('excelImport', PIN, xlRows, xlChon);
+      toast('Đã thêm ' + r.them + ' xe (' + r.xong + ' xe cavet đã xong) · bổ sung ' + r.sdt + ' SĐT, ' + r.gia + ' giá' + (r.thieuSale ? ' · ' + r.thieuSale + ' xe chưa chọn sale' : ''));
+      XL = null; $('#xlsOut').hidden = true; loadCavet();
+    } catch (err) { toast(String(err), 1); }
+  });
+});
 
 /* ================= BẢO HIỂM ================= */
 let BQ = null, bqF = 'moi', bqCur = null;
@@ -861,6 +934,6 @@ $('#bnSave').onclick = () => {
 
 if (PIN) start(); else showLogin();
 </script>
-<script src="totrinh.js?v=1.7.0"></script>
+<script src="totrinh.js?v=1.8.0"></script>
 </body>
 </html>
