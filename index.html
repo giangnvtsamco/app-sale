@@ -169,9 +169,9 @@
     <div id="bhLyDo" class="warn-line" hidden></div>
 
     <div class="field">
-      <span class="lbl">Tìm xe · tên khách hoặc số khung <span class="req">*</span></span>
-      <input id="bhFind" class="inp" type="search" placeholder="VD: Trúc Linh hoặc 3962" autocomplete="off">
-      <span class="hint">Gõ không dấu cũng được · chỉ hiện xe của bạn</span>
+      <span class="lbl">Chọn xe <span class="req">*</span></span>
+      <input id="bhFind" class="inp" type="search" placeholder="Lọc theo tên khách hoặc số khung" autocomplete="off">
+      <span class="hint" id="bhCarHint">Xe của bạn · hóa đơn trong 45 ngày · chưa có hồ sơ bảo hiểm</span>
       <div class="list" id="bhCars"></div>
     </div>
 
@@ -225,7 +225,7 @@
 <script src="https://giangnvtsamco.github.io/samco-core/v1/api.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/v1/ui.js?v=1.1"></script>
 <script>
-const KEY = 'appsale_auth', APP_V = '1.8.0';
+const KEY = 'appsale_auth', APP_V = '1.9.0';
 /* Lưu bản dữ liệu gần nhất trên máy: mở app là thấy ngay, rồi cập nhật ngầm */
 const cacheKey = () => 'appsale_cache_' + (auth && auth.ten || '');
 const cacheGet = () => store.get(cacheKey()) || {};
@@ -459,6 +459,7 @@ function openBh(rec) {
   const vp = $('[data-part=vcx]'), tp = $('[data-part=tnds]');
   setPill(vp, rec ? rec.vcxSale : ''); setPill(tp, rec ? rec.tndsSale : '');
   $('input', vp).value = rec && rec.vcxTien ? num(rec.vcxTien) : ''; $('input', tp).value = rec && rec.tndsTien ? num(rec.tndsTien) : '';
+  $('input', vp).dataset.auto = $('input', tp).dataset.auto = '';
   $('#bhNh').value = rec && rec.nh ? rec.nh : 'Không vay'; $('#bhNhNguoi').value = rec ? rec.nhNguoi : '';
   $('#bhGhi').value = rec ? rec.ghiSale : '';
   $('#bhDxName').textContent = rec && rec.deXuat ? 'Đã có đề xuất. Chọn lại nếu cần thay.' : '';
@@ -478,21 +479,35 @@ function hl(text, q) {
 function renderCars() {
   const q = norm($('#bhFind').value);
   if (bhSel && !q) {
-    $('#bhCars').innerHTML = `<div class="car-opt sel"><b>${esc(bhSel.kh)}</b><span class="mono small">${esc(bhSel.vin)}</span><span class="small muted">${esc([bhSel.xe, bhSel.mau, bhSel.hd ? 'HĐ ' + bhSel.hd : ''].filter(Boolean).join(' · '))}</span></div>`;
+    $('#bhCars').innerHTML = `<div class="car-opt sel"><b>${esc(bhSel.kh)}</b><span class="mono small">${esc(bhSel.vin)}</span><span class="small muted">${esc([bhSel.xe, bhSel.mau, bhSel.hd ? 'HĐ ' + bhSel.hd : ''].filter(Boolean).join(' · '))}</span></div>` +
+      ($('#bhFind').disabled ? '' : '<button class="btn sm" type="button" id="bhDoiXe" style="align-self:flex-start">Đổi xe</button>');
     return;
   }
-  if (!q) { $('#bhCars').innerHTML = ''; return; }
-  const hit = BH.cars.filter(c => norm(c.kh).includes(q) || c.vin.toLowerCase().includes(q)).slice(0, 6);
+  // v1.9: hiện sẵn danh sách xe đủ điều kiện (HĐ ≤ 45 ngày, chưa có hồ sơ); gõ để lọc
+  const hit = BH.cars.filter(c => !q || norm(c.kh).includes(q) || c.vin.toLowerCase().includes(q)).slice(0, 12);
   $('#bhCars').innerHTML = hit.length ? hit.map(c => `<button type="button" class="car-opt" data-vin="${esc(c.vin)}"${c.coBh ? ' disabled' : ''}>
       <b>${hl(c.kh, q)}</b><span class="mono small">${hl(c.vin, q)}</span>
       <span class="small muted">${esc([c.xe, c.mau, 'HĐ ' + c.hd].filter(Boolean).join(' · '))}${c.coBh ? ' · <b style="color:var(--warn)">Đã có hồ sơ bảo hiểm</b>' : ''}</span></button>`).join('')
-    : '<div class="hint">Không thấy xe. Xe chưa được nhập vào app thì vui lòng báo Giang.</div>';
+    : '<div class="hint">' + (q ? 'Không thấy xe phù hợp.' : 'Chưa có xe hóa đơn trong ' + (BH.han || 45) + ' ngày cần kích hoạt.') + ' Xe chưa có trong app vui lòng báo Giang.</div>';
 }
 $('#bhFind').oninput = () => { bhSel = null; renderCars(); };
 $('#bhCars').onclick = e => {
+  if (e.target.id === 'bhDoiXe') { bhSel = null; renderCars(); syncBh(); return; }
   const b = e.target.closest('.car-opt[data-vin]'); if (!b || b.disabled) return;
-  bhSel = BH.cars.find(c => c.vin === b.dataset.vin); $('#bhFind').value = ''; renderCars(); syncBh();
+  bhSel = BH.cars.find(c => c.vin === b.dataset.vin); $('#bhFind').value = ''; renderCars(); autoPhi(); syncBh();
 };
+/* v1.9: tự điền số tiền theo bảng phí (VCX = tỷ lệ × giá HĐ, tối thiểu; TNDS theo dòng xe + mục đích).
+   Chỉ điền ô đang trống hoặc ô app đã tự điền trước đó; số sale tự gõ thì giữ nguyên. */
+function autoPhi() {
+  if (!bhSel) return;
+  const p = phiTheoBang(BH.bangPhi, bhSel.loai, getPill($('#bhMd')), bhSel.gia);
+  [['vcx', p && p.vcx], ['tnds', p && p.tnds.length === 1 ? p.tnds[0] : 0]].forEach(([k, v]) => {
+    const box = $('[data-part=' + k + ']'), inp = $('input', box), loai = getPill(box);
+    if (!loai || loai === 'Không') return;
+    if (inp.value && inp.value !== inp.dataset.auto) return;
+    inp.value = v ? num(v) : ''; inp.dataset.auto = inp.value;
+  });
+}
 
 /* Đối chiếu bảng phí (_BangPhiBH): TNDS theo dòng xe + mục đích; VCX = max(tỷ lệ × giá HĐ gồm VAT, tối thiểu). Chỉ báo, không chặn. */
 const nkey = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -545,7 +560,7 @@ function syncBh() {
 }
 ['#bhMd', '[data-part=vcx]', '[data-part=tnds]'].forEach(sel => $(sel).addEventListener('click', e => {
   const p = e.target.closest('.pill'); if (!p) return;
-  setPill(p.parentElement, p.dataset.v); syncBh();
+  setPill(p.parentElement, p.dataset.v); autoPhi(); syncBh();
 }));
 $$('.part input').forEach(i => {
   i.addEventListener('input', syncBh);

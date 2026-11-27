@@ -51,6 +51,10 @@
   @media (max-width:800px){.cols2{grid-template-columns:1fr}}
   .rep{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:800px){.rep{grid-template-columns:1fr}}
+  /* Tái tục */
+  .tuc td{vertical-align:top}.tuc tbody tr{cursor:pointer}.tuc tbody tr:hover td{background:var(--paper-2)}
+  .tuc-hot td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+  #tucTt .pill{min-height:38px}
   /* Tờ trình */
   .tt-grid{display:grid;grid-template-columns:minmax(380px,1fr) minmax(0,1fr);gap:16px;align-items:start}
   @media (max-width:1100px){.tt-grid{grid-template-columns:1fr}}
@@ -95,6 +99,7 @@
     </div>
     <div class="tabs-top" id="tabs">
       <button class="on" data-v="BaoHiem">Bảo hiểm</button>
+      <button data-v="TaiTuc">Tái tục</button>
       <button data-v="Cavet">Cavet</button>
       <a class="btn" href="https://xedemo.vinfastsamcobinhtan.com/quanly" target="_blank" rel="noopener" style="min-height:42px;border-radius:999px">Xe demo ↗</a>
       <button data-v="NhapXe">Nhập xe</button>
@@ -229,6 +234,31 @@
       <button class="btn pri" id="btnSave" style="min-width:200px;letter-spacing:.14em;font-weight:800">LƯU 0 XE</button>
     </div>
   </section>
+  <!-- ===== TÁI TỤC (v1.9) ===== -->
+  <section id="vTaiTuc" style="display:flex;flex-direction:column;gap:14px" hidden>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="pills" id="tucF">
+        <button class="pill on" type="button" data-f="sap">30 ngày tới</button>
+        <button class="pill" type="button" data-f="xn">Cần xác nhận</button>
+        <button class="pill" type="button" data-f="xong">Đã xử lý</button>
+        <button class="pill" type="button" data-f="all">Tất cả</button>
+      </div>
+      <input id="tucFind" class="inp" style="min-height:38px;flex:1;min-width:180px;max-width:320px;margin-left:auto" placeholder="Tìm khách, SĐT, số khung">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap" id="tucKpi"></div>
+    <div class="tbl-wrap">
+      <table class="tbl tuc">
+        <thead><tr><th>Hết hạn</th><th>Khách hàng</th><th>SĐT</th><th>Xe · Sale</th><th>Đơn vị cũ</th><th style="text-align:right">VCX · TNDS</th><th>Kết quả gọi</th></tr></thead>
+        <tbody id="tucBody"><tr><td colspan="7"><div class="loading"><span class="spin"></span>Đang tải…</div></td></tr></tbody>
+      </table>
+    </div>
+    <div class="card" id="tucNapCard" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="display:flex;flex-direction:column;gap:2px"><span class="sect">Bảo hiểm trước khi dùng app</span>
+        <span class="hint" id="tucNapHint">Nạp file BH_CU.xlsx (T11/2025 → T10/2026). Chỉ thêm hồ sơ chưa có.</span></span>
+      <label class="btn out" for="tucNapIn">Nạp BH cũ</label>
+      <input id="tucNapIn" type="file" accept=".xlsx" hidden>
+    </div>
+  </section>
   <!-- ===== TỜ TRÌNH (totrinh.js) ===== -->
   <section id="vToTrinh" style="display:flex;flex-direction:column;gap:14px" hidden>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -289,6 +319,26 @@
   <div id="appFoot"></div>
 </main>
 
+<div class="sheet-bg" id="tucDlg" hidden><div class="sheet" style="max-width:600px"><div class="grab"></div>
+  <div id="tucHead"></div>
+  <div class="field"><span class="lbl">Kết quả gọi</span><div class="pills" id="tucTt" style="flex-wrap:wrap"></div></div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+    <label class="field"><span class="lbl">Hẹn gọi lại</span><input id="tucHen" class="inp mono" placeholder="dd/mm/yyyy"></label>
+    <label class="field"><span class="lbl">Đơn vị mới</span><select id="tucDv" class="inp"></select></label>
+  </div>
+  <div id="tucMoi" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px" hidden>
+    <label class="field"><span class="lbl">Hiệu lực mới <span class="req">*</span></span><input id="tucHl" class="inp mono" placeholder="dd/mm/yyyy"></label>
+    <label class="field"><span class="lbl">VCX mới</span><input id="tucVcx" class="inp mono" inputmode="numeric" style="text-align:right"></label>
+    <label class="field"><span class="lbl">TNDS mới</span><input id="tucTnds" class="inp mono" inputmode="numeric" style="text-align:right"></label>
+  </div>
+  <label class="field"><span class="lbl">Ghi chú</span><textarea id="tucGhi" class="inp" style="min-height:64px;padding-top:10px" placeholder="VD: khách hẹn chiều thứ 6, muốn so giá PTI"></textarea></label>
+  <div id="tucSua" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+    <label class="field"><span class="lbl">SĐT khách</span><input id="tucSdt" class="inp mono" inputmode="tel"></label>
+    <label class="field"><span class="lbl">Số khung</span><input id="tucVin" class="inp mono" maxlength="17"></label>
+  </div>
+  <div style="display:flex;gap:8px"><button class="btn" id="tucClose" type="button" style="flex:1">Đóng</button><button class="btn pri" id="tucSave" type="button" style="flex:2">Lưu</button></div>
+</div></div>
+
 <div class="sheet-bg" id="txtDlg" hidden>
   <div class="sheet" style="max-width:720px"><div class="grab"></div>
     <span class="sect">Chữ app đọc được từ PDF</span>
@@ -300,7 +350,8 @@
 <div class="sheet-bg" id="bnDlg" hidden><div class="sheet" style="max-width:620px"><div class="grab"></div>
   <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:var(--display);font-size:24px;text-transform:uppercase">Đăng ký thay sale</span><button class="btn sm" onclick="closeDlg('bnDlg')">Đóng</button></div>
   <div class="field"><span class="lbl">Xe · tên khách hoặc số khung <span class="req">*</span></span>
-    <input id="bnFind" class="inp" type="search" placeholder="VD: Trúc Linh hoặc 3962" autocomplete="off">
+    <input id="bnFind" class="inp" type="search" placeholder="Lọc theo tên khách, số khung, sale" autocomplete="off">
+    <label class="small" style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="bnAll"> Hiện cả xe hóa đơn quá 45 ngày</label>
     <div class="list" id="bnCars" style="max-height:220px;overflow:auto"></div></div>
   <div id="bnSel" class="card flat" style="padding:10px 12px" hidden></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -309,6 +360,7 @@
   </div>
   <div class="field"><span class="lbl">Vật chất (VCX)</span><div class="pills" id="bnVcx"></div><input id="bnVcxTien" class="inp mono" inputmode="numeric" placeholder="Số tiền VCX"></div>
   <div class="field"><span class="lbl">Dân sự (TNDS)</span><div class="pills" id="bnTnds"></div><input id="bnTndsTien" class="inp mono" inputmode="numeric" placeholder="Số tiền TNDS"></div>
+  <div id="bnPhi" style="display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:12px;padding:10px 12px" hidden></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
     <label class="field"><span class="lbl">Vay ngân hàng</span><select id="bnNh" class="inp"><option>Không vay</option></select></label>
     <label class="field"><span class="lbl">Người phụ trách NH</span><input id="bnNhNguoi" class="inp" disabled></label>
@@ -355,7 +407,7 @@ $('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
 $('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
 // đủ 4 số là tự vào, không cần bấm nút
 $('#lgPin').addEventListener('input', () => { if (/^\d{4}$/.test($('#lgPin').value.trim()) && !$('#lgBtn').disabled) $('#lgBtn').click(); });
-appFoot('App Sale · Quản lý', '1.8.0', $('#appFoot'));
+appFoot('App Sale · Quản lý', '1.9.0', $('#appFoot'));
 $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
 
 function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); $('#tabs button[data-v="BaoHiem"]').click(); } // mở đầu ở Bảo hiểm; Cavet tải sẵn phía sau
@@ -363,6 +415,7 @@ function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCa
 const VIEW = {
   Cavet: ['Đối chiếu cavet', 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành'],
   BaoHiem: ['Xử lý bảo hiểm', 'Chọn đơn vị · phân loại · theo dõi từng bước'],
+  TaiTuc: ['Tái tục bảo hiểm', 'Hết hạn sau 1 năm · gọi khách trước 15–30 ngày'],
   NhapXe: ['Nhập xe', 'Từ hóa đơn kế toán · dùng chung Cavet và Bảo hiểm'],
   ToTrinh: ['Tờ trình', 'Soạn nhanh · xem trước khổ A4 · lưu sổ · tạo file Word']
 };
@@ -374,6 +427,7 @@ $('#tabs').onclick = e => {
   $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
   if (v === 'BaoHiem') loadBh();
   if (v === 'ToTrinh') ttOpen();
+  if (v === 'TaiTuc') loadTuc();
 };
 
 /* ---------- Cavet ---------- */
@@ -652,6 +706,109 @@ $('#xlsOut').addEventListener('click', e => {
   });
 });
 
+/* ================= TÁI TỤC (v1.9) =================
+ * Hết hạn = ngày kích hoạt + 1 năm. "30 ngày tới": chưa xử lý, hết hạn trong 30 ngày (kể cả đã quá hạn). ≤ 15 ngày tô nổi.
+ * Đồng ý tái tục: ghi hiệu lực mới + đơn vị + VCX/TNDS mới → app tự tạo kỳ năm sau. */
+let TQ = null, tucF = 'sap', tucCur = null;
+const TUC_XONG = ['Đồng ý tái tục', 'Từ chối'];
+const tucXn = x => !['Chắc chắn', 'Giang xác nhận'].includes(x.ghep);
+async function loadTuc() {
+  try { TQ = await call('tucList', PIN); renderTuc(); }
+  catch (e) { $('#tucBody').innerHTML = `<tr><td colspan="7"><div class="empty">${esc(e)}</div></td></tr>`; }
+}
+function tucHan(x) {
+  if (TUC_XONG.includes(x.tt)) return ['ok', x.tt];
+  if (x.con < 0) return ['bad', 'Quá hạn ' + (-x.con) + ' ngày'];
+  if (x.con === 0) return ['bad', 'Hết hạn hôm nay'];
+  return [x.con <= 15 ? 'warn' : 'acc', 'Còn ' + x.con + ' ngày'];
+}
+function renderTuc() {
+  const all = TQ.items, q = norm($('#tucFind').value);
+  const mo = all.filter(x => !TUC_XONG.includes(x.tt));
+  const k = { qh: mo.filter(x => x.con < 0 && x.con >= -60).length, d15: mo.filter(x => x.con >= 0 && x.con <= 15).length,
+    d30: mo.filter(x => x.con > 15 && x.con <= 30).length, xn: all.filter(tucXn).length };
+  $('#tucKpi').innerHTML = `<span class="chip bad">${k.qh} quá hạn chưa xử lý</span><span class="chip warn">${k.d15} xe ≤ 15 ngày</span>
+    <span class="chip acc">${k.d30} xe 16–30 ngày</span>${k.xn ? `<span class="chip mute">${k.xn} hồ sơ cần xác nhận</span>` : ''}`;
+  let ds = all;
+  if (tucF === 'sap') ds = mo.filter(x => x.con <= 30 && x.con >= -60);
+  if (tucF === 'xn') ds = all.filter(tucXn);
+  if (tucF === 'xong') ds = all.filter(x => TUC_XONG.includes(x.tt));
+  if (q) ds = ds.filter(x => norm([x.kh, x.khBh, x.sdt, x.vin, x.sale].join(' ')).includes(q));
+  $('#tucNapHint').textContent = TQ.coBhCu ? 'Đã có ' + TQ.coBhCu + ' hồ sơ cũ (T11/2025 → T10/2026). Nạp lại chỉ thêm hồ sơ chưa có.' : 'Nạp file BH_CU.xlsx (T11/2025 → T10/2026). Chỉ thêm hồ sơ chưa có.';
+  if (!ds.length) { $('#tucBody').innerHTML = `<tr><td colspan="7"><div class="empty">${tucF === 'sap' ? 'Không có xe hết hạn trong 30 ngày tới.' : 'Không có hồ sơ.'}</div></td></tr>`; return; }
+  $('#tucBody').innerHTML = ds.slice(0, 400).map(x => {
+    const [c, t] = tucHan(x);
+    return `<tr data-ma="${esc(x.ma)}" class="${!TUC_XONG.includes(x.tt) && x.con <= 15 ? 'tuc-hot' : ''}">
+      <td><b class="mono">${esc(x.hetHan)}</b><span class="sub2"><span class="chip ${c}">${esc(t)}</span></span></td>
+      <td><b>${esc(x.kh || x.khBh)}</b>${tucXn(x) ? `<span class="sub2"><span class="chip mute">${esc(x.ghep || 'Cần xác nhận')}</span></span>` : ''}${x.khBh && x.kh && norm(x.khBh) !== norm(x.kh) ? `<span class="sub2">Trên đơn BH: ${esc(x.khBh)}</span>` : ''}</td>
+      <td>${x.sdt ? `<a class="mono" href="tel:${esc(x.sdt)}">${esc(x.sdt)}</a>` : '<span class="muted">Chưa có</span>'}</td>
+      <td>${esc(x.xe || '—')}<span class="sub2">${esc(x.sale || '')}</span></td>
+      <td>${esc(x.dv)}<span class="sub2">Kích hoạt ${esc(x.kichHoat)} · ${esc(x.nguon)}</span></td>
+      <td class="mono" style="text-align:right">${x.vcx ? num(x.vcx) : '—'}<span class="sub2">${x.tnds ? num(x.tnds) : '—'}</span></td>
+      <td><span class="chip ${x.tt === 'Chưa gọi' ? 'mute' : TUC_XONG.includes(x.tt) ? 'ok' : 'warn'}">${esc(x.tt)}</span>
+        ${x.hen && x.tt === 'Hẹn gọi lại' ? `<span class="sub2">Hẹn ${esc(x.hen)}</span>` : ''}${x.hieuLuc ? `<span class="sub2">Hiệu lực ${esc(x.hieuLuc)}${x.vcxMoi ? ' · VCX ' + num(x.vcxMoi) : ''}${x.tndsMoi ? ' · TNDS ' + num(x.tndsMoi) : ''}</span>` : ''}${x.dvMoi ? `<span class="sub2">→ ${esc(x.dvMoi)}</span>` : ''}${x.ghi ? `<span class="sub2">${esc(x.ghi)}</span>` : ''}</td>
+    </tr>`;
+  }).join('') + (ds.length > 400 ? `<tr><td colspan="7"><div class="empty">Hiện 400/${ds.length} hồ sơ. Dùng ô tìm để lọc.</div></td></tr>` : '');
+}
+$('#tucF').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; tucF = b.dataset.f; $$('#tucF .pill').forEach(x => x.classList.toggle('on', x === b)); renderTuc(); };
+$('#tucFind').oninput = () => TQ && renderTuc();
+$('#tucBody').onclick = e => {
+  const tr = e.target.closest('tr[data-ma]'); if (!tr || e.target.closest('a')) return;
+  const x = TQ.items.find(i => i.ma === tr.dataset.ma); if (!x) return;
+  tucCur = x;
+  const [c, t] = tucHan(x);
+  $('#tucHead').innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div><div style="font-family:var(--display);font-size:22px;text-transform:uppercase;line-height:1.1">${esc(x.kh || x.khBh)}</div>
+      <div class="small muted">${esc(x.xe || '—')}${x.sale ? ' · ' + esc(x.sale) : ''}${x.vin ? ' · <span class="mono">' + esc(x.vin) + '</span>' : ''}</div></div>
+      <span class="chip ${c}">${esc(t)}</span></div>
+    <div class="facts" style="margin-top:10px"><div><span class="lbl">Hết hạn</span><b class="mono">${esc(x.hetHan)}</b></div><div><span class="lbl">Đơn vị cũ</span><b>${esc(x.dv)}</b></div>
+      <div><span class="lbl">VCX</span><b class="mono">${x.vcx ? num(x.vcx) : '—'}</b></div><div><span class="lbl">TNDS</span><b class="mono">${x.tnds ? num(x.tnds) : '—'}</b></div></div>
+    ${x.sdt ? `<a class="btn block" href="tel:${esc(x.sdt)}" style="margin-top:10px">Gọi ${esc(x.sdt)}</a>` : ''}
+    ${x.ghiBh || x.ghiGhep ? `<div class="hint" style="margin-top:6px">${esc([x.ghiBh, x.ghiGhep].filter(Boolean).join(' · '))}</div>` : ''}
+    ${x.lan ? `<div class="hint">Đã gọi ${x.lan} lần · gần nhất ${esc(x.goiLuc)}</div>` : ''}`;
+  $('#tucTt').innerHTML = TQ.trangThai.map(s => `<button class="pill${s === x.tt ? ' on' : ''}" type="button" data-v="${esc(s)}">${esc(s)}</button>`).join('');
+  $('#tucHen').value = x.hen || ''; $('#tucGhi').value = x.ghi || '';
+  $('#tucHl').value = x.hieuLuc || x.hetHan; $('#tucVcx').value = x.vcxMoi ? num(x.vcxMoi) : ''; $('#tucTnds').value = x.tndsMoi ? num(x.tndsMoi) : '';
+  $('#tucMoi').hidden = x.tt !== 'Đồng ý tái tục';
+  $('#tucDv').innerHTML = '<option value="">Giữ đơn vị cũ</option>' + TQ.donVi.map(d => `<option${d === x.dvMoi ? ' selected' : ''}>${esc(d)}</option>`).join('');
+  const cu = String(x.ma).indexOf('BC-') === 0;
+  $('#tucSua').hidden = !cu; $('#tucSdt').value = x.sdt || ''; $('#tucVin').value = x.vin || '';
+  $('#tucDlg').hidden = false;
+};
+$('#tucTt').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; $$('#tucTt .pill').forEach(x => x.classList.toggle('on', x === b)); $('#tucMoi').hidden = b.dataset.v !== 'Đồng ý tái tục'; };
+['#tucVcx', '#tucTnds'].forEach(id => { $(id).onblur = e => { const n = Number(e.target.value.replace(/[^\d]/g, '')); e.target.value = n ? num(n) : ''; }; });
+$('#tucClose').onclick = () => { $('#tucDlg').hidden = true; };
+$('#tucSave').onclick = () => {
+  const x = tucCur; if (!x) return;
+  const tt = ($('#tucTt .pill.on') || {}).dataset?.v || 'Chưa gọi';
+  const hen = $('#tucHen').value.trim();
+  if (hen && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(hen)) return toast('Ngày hẹn theo dạng dd/mm/yyyy.', 1);
+  const d = { tt, hen, dvMoi: $('#tucDv').value, ghi: $('#tucGhi').value.trim() };
+  if (tt === 'Đồng ý tái tục') {
+    d.hieuLuc = $('#tucHl').value.trim();
+    if (!/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(d.hieuLuc)) return toast('Vui lòng nhập ngày hiệu lực mới (dd/mm/yyyy).', 1);
+    d.vcxMoi = Number($('#tucVcx').value.replace(/[^\d]/g, '')) || ''; d.tndsMoi = Number($('#tucTnds').value.replace(/[^\d]/g, '')) || '';
+  }
+  if (String(x.ma).indexOf('BC-') === 0) { d.sdt = $('#tucSdt').value.trim(); d.vin = $('#tucVin').value.trim(); }
+  busy($('#tucSave'), 'Đang lưu', async () => {
+    try { await call('tucSave', PIN, x.ma, d); $('#tucDlg').hidden = true; toast(tt === 'Đồng ý tái tục' ? 'Đã lưu · năm sau tự nhắc lại' : 'Đã lưu · ' + tt); await loadTuc(); }
+    catch (e) { toast(String(e), 1); }
+  });
+};
+$('#tucNapIn').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  if (!window.XLSX) return toast('Đang tải bộ đọc Excel, vui lòng thử lại.', 1);
+  try {
+    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+    const ws = wb.Sheets['BH_CU'] || wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { raw: false, defval: '' });
+    if (!rows.length || !('ID' in rows[0]) || !('Ngày hết hạn' in rows[0])) return toast('File chưa đúng mẫu BH_CU.', 1);
+    const r = await call('tucNap', PIN, rows);
+    toast('Đã nạp ' + r.them + ' hồ sơ cũ' + (r.bo ? ' · bỏ qua ' + r.bo + ' đã có' : ''));
+    loadTuc();
+  } catch (err) { toast(String(err), 1); }
+};
+
 /* ================= BẢO HIỂM ================= */
 let BQ = null, bqF = 'moi', bqCur = null;
 const BUOC = ['Sale gửi', 'Xác nhận', 'Thu tiền', 'Thanh toán', 'Hoàn tất'];
@@ -883,17 +1040,31 @@ const bnVal = id => { const b = $('#' + id + ' .pill.on'); return b ? b.dataset.
 function bnSync() {
   ['Vcx', 'Tnds'].forEach(k => { const off = bnVal('bn' + k) === 'Không'; $('#bn' + k + 'Tien').disabled = off; if (off) $('#bn' + k + 'Tien').value = ''; });
   $('#bnNhNguoi').disabled = $('#bnNh').value === 'Không vay';
+  const show = !!(bnSel && BQ && (bnVal('bnVcx') !== 'Không' || bnVal('bnTnds') !== 'Không'));
+  $('#bnPhi').hidden = !show;
+  if (show) $('#bnPhi').innerHTML = phiBox(phiCheck(BQ.bangPhi, bnSel.loai, bnVal('bnMd'), bnSel.gia, bnVal('bnVcx'), $('#bnVcxTien').value, bnVal('bnTnds'), $('#bnTndsTien').value));
+}
+/* v1.9: tự điền số tiền theo bảng phí; chỉ điền ô trống hoặc ô app đã tự điền, số Giang gõ thì giữ */
+function bnAutoPhi() {
+  if (!bnSel || !BQ) return;
+  const p = phiTheoBang(BQ.bangPhi, bnSel.loai, bnVal('bnMd'), bnSel.gia);
+  [['Vcx', p && p.vcx], ['Tnds', p && p.tnds.length === 1 ? p.tnds[0] : 0]].forEach(([k, v]) => {
+    const inp = $('#bn' + k + 'Tien');
+    if (bnVal('bn' + k) === 'Không' || (inp.value && inp.value !== inp.dataset.auto)) return;
+    inp.value = v ? Number(v).toLocaleString('vi-VN') : ''; inp.dataset.auto = inp.value;
+  });
 }
 function bnRenderCars() {
   if (!BN) return;
   const k = norm($('#bnFind').value);
-  const list = BN.cars.filter(c => !k || norm(c.kh + ' ' + c.vin + ' ' + c.sale).includes(k)).slice(0, 30);
+  const list = BN.cars.filter(c => !k || norm(c.kh + ' ' + c.vin + ' ' + c.sale).includes(k)).slice(0, 40);
   $('#bnCars').innerHTML = list.length ? list.map(c => `<button class="q-item${bnSel && bnSel.vin === c.vin ? ' on' : ''}" data-vin="${esc(c.vin)}" type="button" style="text-align:left">
     <b>${esc(c.kh || '(chưa có tên)')}</b> <span class="mono small">…${esc(c.vin.slice(-6))}</span><span class="sub2">${esc(c.xe)} ${esc(c.mau)} · ${esc(c.sale || 'chưa có sale')} · HĐ ${esc(c.hd || '—')}${c.luuTru ? ' · lưu trữ' : ''}</span></button>`).join('')
-    : '<div class="empty">Không tìm thấy xe chưa có hồ sơ bảo hiểm.</div>';
+    : '<div class="empty">' + (BN.all ? 'Không tìm thấy xe chưa có hồ sơ bảo hiểm.' : 'Không có xe hóa đơn trong ' + BN.han + ' ngày chưa có hồ sơ. Tick ô trên để xem xe cũ hơn.') + '</div>';
 }
 $('#btnBhNew').onclick = async () => {
-  bnSel = null; $('#bnSel').hidden = true; $('#bnFind').value = ''; $('#bnVcxTien').value = ''; $('#bnTndsTien').value = ''; $('#bnGhi').value = ''; $('#bnFile').value = ''; $('#bnNhNguoi').value = '';
+  bnSel = null; $('#bnSel').hidden = true; $('#bnFind').value = ''; $('#bnVcxTien').value = ''; $('#bnTndsTien').value = ''; $('#bnAll').checked = false;
+  $('#bnVcxTien').dataset.auto = $('#bnTndsTien').dataset.auto = ''; $('#bnGhi').value = ''; $('#bnFile').value = ''; $('#bnNhNguoi').value = '';
   const d = new Date(), p = n => String(n).padStart(2, '0'); $('#bnNgay').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   $('#bnVcx').innerHTML = $('#bnTnds').innerHTML = LOAI_BH.map(v => `<button class="pill" type="button" data-v="${esc(v)}">${esc(v)}</button>`).join('');
   bnPick('bnVcx', 'Không'); bnPick('bnTnds', 'Không'); bnPick('bnMd', 'Không kinh doanh'); bnSync();
@@ -910,12 +1081,16 @@ $('#bnCars').onclick = e => {
   const b = e.target.closest('[data-vin]'); if (!b) return;
   bnSel = BN.cars.find(c => c.vin === b.dataset.vin);
   $('#bnSel').hidden = false;
-  $('#bnSel').innerHTML = `<b>${esc(bnSel.kh)}</b> · <span class="mono">${esc(bnSel.vin)}</span><br><span class="small muted">${esc(bnSel.xe)} ${esc(bnSel.mau)} · Sale: <b>${esc(bnSel.sale || 'chưa có')}</b></span>`;
-  bnRenderCars();
+  $('#bnSel').innerHTML = `<b>${esc(bnSel.kh)}</b> · <span class="mono">${esc(bnSel.vin)}</span><br><span class="small muted">${esc(bnSel.xe)} ${esc(bnSel.mau)} · Sale: <b>${esc(bnSel.sale || 'chưa có')}</b>${bnSel.gia ? ' · giá HĐ ' + num(bnSel.gia) : ' · <b style="color:var(--warn)">chưa có giá HĐ</b>'}</span>`;
+  bnRenderCars(); bnAutoPhi(); bnSync();
 };
-['bnMd', 'bnVcx', 'bnTnds'].forEach(id => $('#' + id).addEventListener('click', e => { const b = e.target.closest('.pill'); if (!b) return; bnPick(id, b.dataset.v); bnSync(); }));
+['bnMd', 'bnVcx', 'bnTnds'].forEach(id => $('#' + id).addEventListener('click', e => { const b = e.target.closest('.pill'); if (!b) return; bnPick(id, b.dataset.v); bnAutoPhi(); bnSync(); }));
+$('#bnAll').onchange = async () => {
+  $('#bnCars').innerHTML = '<div class="loading"><span class="spin"></span>Đang tải…</div>';
+  try { BN = await call('adminBhCars', PIN, $('#bnAll').checked); bnRenderCars(); } catch (e) { $('#bnCars').innerHTML = `<div class="empty">${esc(e)}</div>`; }
+};
 $('#bnNh').onchange = bnSync;
-['bnVcxTien', 'bnTndsTien'].forEach(id => $('#' + id).addEventListener('input', e => { const n = e.target.value.replace(/\D/g, ''); e.target.value = n ? Number(n).toLocaleString('vi-VN') : ''; }));
+['bnVcxTien', 'bnTndsTien'].forEach(id => $('#' + id).addEventListener('input', e => { const n = e.target.value.replace(/\D/g, ''); e.target.value = n ? Number(n).toLocaleString('vi-VN') : ''; bnSync(); }));
 $('#bnSave').onclick = () => {
   if (!bnSel) return toast('Vui lòng chọn xe.', 1);
   const iso = $('#bnNgay').value; if (!iso) return toast('Vui lòng chọn ngày kích hoạt.', 1);
@@ -934,6 +1109,6 @@ $('#bnSave').onclick = () => {
 
 if (PIN) start(); else showLogin();
 </script>
-<script src="totrinh.js?v=1.8.0"></script>
+<script src="totrinh.js?v=1.9.0"></script>
 </body>
 </html>
