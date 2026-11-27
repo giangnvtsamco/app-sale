@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Quản lý · App Sale SAMCO</title>
+<title>Quản lý · Phòng Kinh Doanh SAMCO</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -79,7 +79,7 @@
   <div class="hd-l">
     <div class="brand">SAMCO</div>
     <div class="title">Quản lý</div>
-    <div class="sub">App Sale · chỉ Giang</div>
+    <div class="sub">Phòng Kinh Doanh · chỉ Giang</div>
     <div class="chrome"></div>
   </div>
   <div class="card" style="display:flex;flex-direction:column;gap:12px">
@@ -87,7 +87,7 @@
       <input id="lgPin" class="inp mono" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" placeholder="4 số"></label>
     <button id="lgBtn" class="btn cta pri">Vào trang quản lý</button>
   </div>
-  <a href="./" class="small" style="text-align:center;color:var(--muted)">Về App Sale</a>
+  <a href="./" class="small" style="text-align:center;color:var(--muted)">Về trang Phòng Kinh Doanh</a>
 </section>
 
 <main id="vApp" class="wrap wide" hidden>
@@ -408,7 +408,7 @@ $('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
 $('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
 // đủ 4 số là tự vào, không cần bấm nút
 $('#lgPin').addEventListener('input', () => { if (/^\d{4}$/.test($('#lgPin').value.trim()) && !$('#lgBtn').disabled) $('#lgBtn').click(); });
-appFoot('App Sale · Quản lý', '1.9.1', $('#appFoot'));
+appFoot('Phòng Kinh Doanh · Quản lý', '1.10.0', $('#appFoot'));
 $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
 
 /* v1.9.1: nhớ trạng thái màn hình (tab, bộ lọc, bản nháp) để trình duyệt tải lại trang thì mở đúng chỗ cũ.
@@ -416,7 +416,14 @@ $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin');
 const NHO_KEY = 'appsale_admin_nho';
 function nhoDoc() { try { const o = JSON.parse(localStorage.getItem(NHO_KEY) || '{}'); return o.t && Date.now() - o.t < 8 * 3600e3 ? o : {}; } catch (e) { return {}; } }
 function nhoGhi(patch) { try { localStorage.setItem(NHO_KEY, JSON.stringify(Object.assign(nhoDoc(), patch, { t: Date.now() }))); } catch (e) {} }
-function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); const v = nhoDoc().tab; const b = v && $('#tabs button[data-v="' + v + '"]'); (b || $('#tabs button[data-v="BaoHiem"]')).click(); } // mở lại tab cũ; mặc định Bảo hiểm
+/* v1.10: mỗi tab một link riêng (#baohiem, #taituc, #cavet, #nhapxe, #totrinh) · ưu tiên link, sau đó tab nhớ, mặc định Bảo hiểm */
+const HASH_V = { BaoHiem: 'baohiem', TaiTuc: 'taituc', Cavet: 'cavet', NhapXe: 'nhapxe', ToTrinh: 'totrinh' };
+const V_HASH = Object.fromEntries(Object.entries(HASH_V).map(([k, v]) => [v, k]));
+function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); const v = V_HASH[location.hash.slice(1)] || nhoDoc().tab; const b = v && $('#tabs button[data-v="' + v + '"]'); (b || $('#tabs button[data-v="BaoHiem"]')).click(); }
+window.addEventListener('hashchange', () => {
+  const v = V_HASH[location.hash.slice(1)], on = $('#tabs button.on');
+  if (v && !$('#vApp').hidden && (!on || on.dataset.v !== v)) $('#tabs button[data-v="' + v + '"]').click();
+});
 
 const VIEW = {
   Cavet: ['Đối chiếu cavet', 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành'],
@@ -429,6 +436,7 @@ $('#tabs').onclick = e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
   const v = b.dataset.v;
   nhoGhi({ tab: v });
+  if (location.hash !== '#' + HASH_V[v]) history[location.hash ? 'pushState' : 'replaceState'](null, '', '#' + HASH_V[v]);
   $$('#tabs button[data-v]').forEach(x => x.classList.toggle('on', x === b));
   Object.keys(VIEW).forEach(k => $('#v' + k).hidden = k !== v);
   $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
@@ -1145,6 +1153,6 @@ $('#bnSave').onclick = () => {
 
 if (PIN) start(); else showLogin();
 </script>
-<script src="totrinh.js?v=1.9.1"></script>
+<script src="totrinh.js?v=1.10.0"></script>
 </body>
 </html>

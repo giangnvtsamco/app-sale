@@ -1,6 +1,6 @@
-# App Sale · VinFast SAMCO Bình Tân
+# Phòng Kinh Doanh · VinFast SAMCO Bình Tân (trước đây: App Sale)
 
-https://sale.vinfastsamcobinhtan.com · bản **v1.6**
+https://kinhdoanh.vinfastsamcobinhtan.com · bản **v1.10** (link cũ sale.vinfastsamcobinhtan.com tự chuyển sang)
 
 ## Kiến trúc
 Giao diện (GitHub Pages) → Apps Script (link `/exec` trong `config.js`) → Google Sheet + Drive.

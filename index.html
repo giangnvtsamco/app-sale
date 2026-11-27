@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f4e8c">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="App Sale">
-<title>App Sale · SAMCO</title>
+<meta name="apple-mobile-web-app-title" content="Phòng KD">
+<title>Phòng Kinh Doanh · SAMCO</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +57,7 @@
 <section id="vLogin" class="login" hidden>
   <div class="hd-l">
     <div class="brand">SAMCO</div>
-    <div class="title">App Sale</div>
+    <div class="title">Phòng Kinh Doanh</div>
     <div class="sub">VinFast SAMCO Bình Tân</div>
     <div class="chrome"></div>
   </div>
@@ -225,7 +225,7 @@
 <script src="https://giangnvtsamco.github.io/samco-core/v1/api.js"></script>
 <script src="https://giangnvtsamco.github.io/samco-core/v1/ui.js?v=1.1"></script>
 <script>
-const KEY = 'appsale_auth', APP_V = '1.9.1';
+const KEY = 'appsale_auth', APP_V = '1.10.0';
 /* Lưu bản dữ liệu gần nhất trên máy: mở app là thấy ngay, rồi cập nhật ngầm */
 const cacheKey = () => 'appsale_cache_' + (auth && auth.ten || '');
 const cacheGet = () => store.get(cacheKey()) || {};
@@ -278,12 +278,22 @@ $('#btnOut').onclick = () => {
 function startApp() {
   $('#vLogin').hidden = true; $('#vApp').hidden = false; $('#tabbar').hidden = false;
   $('#btnOut').textContent = auth.ten + ' · Đăng xuất';
-  $('#tabbar button[data-tab="BaoHiem"]').click(); // mở đầu ở tab Bảo hiểm
+  // v1.10: mở theo link (#baohiem, #cavet); không có thì mở Bảo hiểm
+  const b = $('#tabbar button[data-tab="' + (TAB_HASH[location.hash.slice(1)] || 'BaoHiem') + '"]');
+  b.click();
 }
+/* v1.10: mỗi tab một link riêng · tải lại vẫn đúng tab, lưu dấu trang, nút Quay lại dùng được */
+const HASH_TAB = { BaoHiem: 'baohiem', Cavet: 'cavet' };
+const TAB_HASH = { baohiem: 'BaoHiem', cavet: 'Cavet' };
+window.addEventListener('hashchange', () => {
+  const t = TAB_HASH[location.hash.slice(1)];
+  if (t && t !== tab && !$('#tabbar').hidden) $('#tabbar button[data-tab="' + t + '"]').click();
+});
 
 let tab = 'BaoHiem';
 $$('#tabbar button[data-tab]').forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
+  if (location.hash !== '#' + HASH_TAB[tab]) history[location.hash ? 'pushState' : 'replaceState'](null, '', '#' + HASH_TAB[tab]);
   $$('#tabbar button').forEach(x => x.classList.toggle('on', x === b));
   ['Cavet', 'BaoHiem'].forEach(k => $('#tab' + k).hidden = k !== tab);
   $('#pgTitle').textContent = { Cavet: 'Cavet', BaoHiem: 'Bảo hiểm' }[tab];
@@ -606,7 +616,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- Khởi động ---------- */
-appFoot('App Sale', APP_V, $('#appFoot'));
+appFoot('Phòng Kinh Doanh', APP_V, $('#appFoot'));
 if (auth && auth.ten) startApp(); else showLogin();
 </script>
 </body>
