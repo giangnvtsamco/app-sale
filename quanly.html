@@ -12,6 +12,7 @@
 <style>
   /* trải nghiệm như app: chạm 2 lần không phóng to, không nháy xanh khi chạm */
   html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  html,body{overscroll-behavior-y:contain} /* v1.9.1: không kéo xuống làm mới trang */
   button,a,label{-webkit-tap-highlight-color:transparent}
   .grid2{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
   @media (max-width:980px){.grid2{grid-template-columns:1fr}}
@@ -407,10 +408,15 @@ $('#lgBtn').onclick = () => busy($('#lgBtn'), 'Đang kiểm tra', async () => {
 $('#lgPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#lgBtn').click(); });
 // đủ 4 số là tự vào, không cần bấm nút
 $('#lgPin').addEventListener('input', () => { if (/^\d{4}$/.test($('#lgPin').value.trim()) && !$('#lgBtn').disabled) $('#lgBtn').click(); });
-appFoot('App Sale · Quản lý', '1.9.0', $('#appFoot'));
+appFoot('App Sale · Quản lý', '1.9.1', $('#appFoot'));
 $('#btnOut').onclick = () => { try { sessionStorage.removeItem('appsale_admin'); } catch (e) {} PIN = ''; showLogin(); };
 
-function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); $('#tabs button[data-v="BaoHiem"]').click(); } // mở đầu ở Bảo hiểm; Cavet tải sẵn phía sau
+/* v1.9.1: nhớ trạng thái màn hình (tab, bộ lọc, bản nháp) để trình duyệt tải lại trang thì mở đúng chỗ cũ.
+   Lưu trên máy này, tự hết hạn sau 8 giờ. */
+const NHO_KEY = 'appsale_admin_nho';
+function nhoDoc() { try { const o = JSON.parse(localStorage.getItem(NHO_KEY) || '{}'); return o.t && Date.now() - o.t < 8 * 3600e3 ? o : {}; } catch (e) { return {}; } }
+function nhoGhi(patch) { try { localStorage.setItem(NHO_KEY, JSON.stringify(Object.assign(nhoDoc(), patch, { t: Date.now() }))); } catch (e) {} }
+function start() { $('#vLogin').hidden = true; $('#vApp').hidden = false; loadCavet(); const v = nhoDoc().tab; const b = v && $('#tabs button[data-v="' + v + '"]'); (b || $('#tabs button[data-v="BaoHiem"]')).click(); } // mở lại tab cũ; mặc định Bảo hiểm
 
 const VIEW = {
   Cavet: ['Đối chiếu cavet', 'Sale tick “Đã gửi Admin” → Giang kiểm với Admin → Hoàn thành'],
@@ -422,6 +428,7 @@ const VIEW = {
 $('#tabs').onclick = e => {
   const b = e.target.closest('button[data-v]'); if (!b) return;
   const v = b.dataset.v;
+  nhoGhi({ tab: v });
   $$('#tabs button[data-v]').forEach(x => x.classList.toggle('on', x === b));
   Object.keys(VIEW).forEach(k => $('#v' + k).hidden = k !== v);
   $('#pgTitle').textContent = VIEW[v][0]; $('#pgSub').textContent = VIEW[v][1];
@@ -708,12 +715,19 @@ $('#xlsOut').addEventListener('click', e => {
 
 /* ================= TÁI TỤC (v1.9) =================
  * Hết hạn = ngày kích hoạt + 1 năm. "30 ngày tới": chưa xử lý, hết hạn trong 30 ngày (kể cả đã quá hạn). ≤ 15 ngày tô nổi.
- * Đồng ý tái tục: ghi hiệu lực mới + đơn vị + VCX/TNDS mới → app tự tạo kỳ năm sau. */
-let TQ = null, tucF = 'sap', tucCur = null;
+ * Đồng ý tái tục: ghi hiệu lực mới + đơn vị + VCX/TNDS mới → app tự tạo kỳ năm sau.
+ * v1.9.1: xe đã quá hạn không hiện ở "30 ngày tới" (chỉ còn trong "Tất cả"); nhớ bộ lọc, ô tìm, bản nháp khi trang tải lại. */
+let TQ = null, tucF = nhoDoc().tucF || 'sap', tucCur = null, tucNhapMo = true;
 const TUC_XONG = ['Đồng ý tái tục', 'Từ chối'];
 const tucXn = x => !['Chắc chắn', 'Giang xác nhận'].includes(x.ghep);
 async function loadTuc() {
-  try { TQ = await call('tucList', PIN); renderTuc(); }
+  if (tucNhapMo) { // lần đầu mở tab: khôi phục bộ lọc, ô tìm
+    const n = nhoDoc(); $('#tucFind').value = n.tucQ || ''; $$('#tucF .pill').forEach(x => x.classList.toggle('on', x.dataset.f === tucF));
+  }
+  try {
+    TQ = await call('tucList', PIN); renderTuc();
+    if (tucNhapMo) { tucNhapMo = false; tucMoNhap(); }
+  }
   catch (e) { $('#tucBody').innerHTML = `<tr><td colspan="7"><div class="empty">${esc(e)}</div></td></tr>`; }
 }
 function tucHan(x) {
@@ -725,17 +739,17 @@ function tucHan(x) {
 function renderTuc() {
   const all = TQ.items, q = norm($('#tucFind').value);
   const mo = all.filter(x => !TUC_XONG.includes(x.tt));
-  const k = { qh: mo.filter(x => x.con < 0 && x.con >= -60).length, d15: mo.filter(x => x.con >= 0 && x.con <= 15).length,
-    d30: mo.filter(x => x.con > 15 && x.con <= 30).length, xn: all.filter(tucXn).length };
-  $('#tucKpi').innerHTML = `<span class="chip bad">${k.qh} quá hạn chưa xử lý</span><span class="chip warn">${k.d15} xe ≤ 15 ngày</span>
+  const k = { d15: mo.filter(x => x.con >= 0 && x.con <= 15).length,
+    d30: mo.filter(x => x.con > 15 && x.con <= 30).length, xn: all.filter(x => tucXn(x) && x.con >= 0).length };
+  $('#tucKpi').innerHTML = `<span class="chip warn">${k.d15} xe ≤ 15 ngày</span>
     <span class="chip acc">${k.d30} xe 16–30 ngày</span>${k.xn ? `<span class="chip mute">${k.xn} hồ sơ cần xác nhận</span>` : ''}`;
   let ds = all;
-  if (tucF === 'sap') ds = mo.filter(x => x.con <= 30 && x.con >= -60);
-  if (tucF === 'xn') ds = all.filter(tucXn);
+  if (tucF === 'sap') ds = mo.filter(x => x.con >= 0 && x.con <= 30);
+  if (tucF === 'xn') ds = all.filter(x => tucXn(x) && x.con >= 0);
   if (tucF === 'xong') ds = all.filter(x => TUC_XONG.includes(x.tt));
   if (q) ds = ds.filter(x => norm([x.kh, x.khBh, x.sdt, x.vin, x.sale].join(' ')).includes(q));
   $('#tucNapHint').textContent = TQ.coBhCu ? 'Đã có ' + TQ.coBhCu + ' hồ sơ cũ (T11/2025 → T10/2026). Nạp lại chỉ thêm hồ sơ chưa có.' : 'Nạp file BH_CU.xlsx (T11/2025 → T10/2026). Chỉ thêm hồ sơ chưa có.';
-  if (!ds.length) { $('#tucBody').innerHTML = `<tr><td colspan="7"><div class="empty">${tucF === 'sap' ? 'Không có xe hết hạn trong 30 ngày tới.' : 'Không có hồ sơ.'}</div></td></tr>`; return; }
+  if (!ds.length) { $('#tucBody').innerHTML = `<tr><td colspan="7"><div class="empty">${tucF === 'sap' ? 'Không có xe sắp hết hạn trong 30 ngày tới.' : 'Không có hồ sơ.'}</div></td></tr>`; return; }
   $('#tucBody').innerHTML = ds.slice(0, 400).map(x => {
     const [c, t] = tucHan(x);
     return `<tr data-ma="${esc(x.ma)}" class="${!TUC_XONG.includes(x.tt) && x.con <= 15 ? 'tuc-hot' : ''}">
@@ -750,11 +764,33 @@ function renderTuc() {
     </tr>`;
   }).join('') + (ds.length > 400 ? `<tr><td colspan="7"><div class="empty">Hiện 400/${ds.length} hồ sơ. Dùng ô tìm để lọc.</div></td></tr>` : '');
 }
-$('#tucF').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; tucF = b.dataset.f; $$('#tucF .pill').forEach(x => x.classList.toggle('on', x === b)); renderTuc(); };
-$('#tucFind').oninput = () => TQ && renderTuc();
+$('#tucF').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; tucF = b.dataset.f; nhoGhi({ tucF }); $$('#tucF .pill').forEach(x => x.classList.toggle('on', x === b)); renderTuc(); };
+$('#tucFind').oninput = () => { nhoGhi({ tucQ: $('#tucFind').value }); TQ && renderTuc(); };
+/* Bản nháp khung ghi kết quả: lưu mỗi lần chọn / gõ; mở lại khi trang tải lại; xóa khi Lưu hoặc Đóng */
+function tucNhapLay() {
+  return { ma: tucCur && tucCur.ma, tt: ($('#tucTt .pill.on') || {}).dataset?.v || '', hen: $('#tucHen').value, dv: $('#tucDv').value, ghi: $('#tucGhi').value,
+    hl: $('#tucHl').value, vcx: $('#tucVcx').value, tnds: $('#tucTnds').value, sdt: $('#tucSdt').value, vin: $('#tucVin').value };
+}
+function tucNhapLuu() { if (tucCur && !$('#tucDlg').hidden) nhoGhi({ tucNhap: tucNhapLay() }); }
+function tucNhapXoa() { nhoGhi({ tucNhap: null }); }
+function tucMoNhap() {
+  const d = nhoDoc().tucNhap; if (!d || !d.ma) return;
+  const tr = $('#tucBody tr[data-ma="' + CSS.escape(d.ma) + '"]');
+  const x = TQ.items.find(i => i.ma === d.ma); if (!x) return tucNhapXoa();
+  tucMo(x);
+  if (d.tt) { $$('#tucTt .pill').forEach(p => p.classList.toggle('on', p.dataset.v === d.tt)); $('#tucMoi').hidden = d.tt !== 'Đồng ý tái tục'; }
+  $('#tucHen').value = d.hen || ''; $('#tucDv').value = d.dv || ''; $('#tucGhi').value = d.ghi || '';
+  $('#tucHl').value = d.hl || $('#tucHl').value; $('#tucVcx').value = d.vcx || ''; $('#tucTnds').value = d.tnds || '';
+  if (!$('#tucSua').hidden) { $('#tucSdt').value = d.sdt || ''; $('#tucVin').value = d.vin || ''; }
+  toast('Đã mở lại hồ sơ đang ghi dở');
+}
+$('#tucDlg').addEventListener('input', tucNhapLuu); $('#tucDlg').addEventListener('change', tucNhapLuu);
 $('#tucBody').onclick = e => {
   const tr = e.target.closest('tr[data-ma]'); if (!tr || e.target.closest('a')) return;
   const x = TQ.items.find(i => i.ma === tr.dataset.ma); if (!x) return;
+  tucMo(x); tucNhapLuu();
+};
+function tucMo(x) {
   tucCur = x;
   const [c, t] = tucHan(x);
   $('#tucHead').innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
@@ -774,10 +810,10 @@ $('#tucBody').onclick = e => {
   const cu = String(x.ma).indexOf('BC-') === 0;
   $('#tucSua').hidden = !cu; $('#tucSdt').value = x.sdt || ''; $('#tucVin').value = x.vin || '';
   $('#tucDlg').hidden = false;
-};
-$('#tucTt').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; $$('#tucTt .pill').forEach(x => x.classList.toggle('on', x === b)); $('#tucMoi').hidden = b.dataset.v !== 'Đồng ý tái tục'; };
+}
+$('#tucTt').onclick = e => { const b = e.target.closest('[data-v]'); if (!b) return; $$('#tucTt .pill').forEach(x => x.classList.toggle('on', x === b)); $('#tucMoi').hidden = b.dataset.v !== 'Đồng ý tái tục'; tucNhapLuu(); };
 ['#tucVcx', '#tucTnds'].forEach(id => { $(id).onblur = e => { const n = Number(e.target.value.replace(/[^\d]/g, '')); e.target.value = n ? num(n) : ''; }; });
-$('#tucClose').onclick = () => { $('#tucDlg').hidden = true; };
+$('#tucClose').onclick = () => { $('#tucDlg').hidden = true; tucNhapXoa(); };
 $('#tucSave').onclick = () => {
   const x = tucCur; if (!x) return;
   const tt = ($('#tucTt .pill.on') || {}).dataset?.v || 'Chưa gọi';
@@ -791,7 +827,7 @@ $('#tucSave').onclick = () => {
   }
   if (String(x.ma).indexOf('BC-') === 0) { d.sdt = $('#tucSdt').value.trim(); d.vin = $('#tucVin').value.trim(); }
   busy($('#tucSave'), 'Đang lưu', async () => {
-    try { await call('tucSave', PIN, x.ma, d); $('#tucDlg').hidden = true; toast(tt === 'Đồng ý tái tục' ? 'Đã lưu · năm sau tự nhắc lại' : 'Đã lưu · ' + tt); await loadTuc(); }
+    try { await call('tucSave', PIN, x.ma, d); $('#tucDlg').hidden = true; tucNhapXoa(); toast(tt === 'Đồng ý tái tục' ? 'Đã lưu · năm sau tự nhắc lại' : 'Đã lưu · ' + tt); await loadTuc(); }
     catch (e) { toast(String(e), 1); }
   });
 };
@@ -1109,6 +1145,6 @@ $('#bnSave').onclick = () => {
 
 if (PIN) start(); else showLogin();
 </script>
-<script src="totrinh.js?v=1.9.0"></script>
+<script src="totrinh.js?v=1.9.1"></script>
 </body>
 </html>
